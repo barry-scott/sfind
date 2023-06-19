@@ -12,19 +12,6 @@ pub struct CommandOptions {
 }
 
 impl CommandOptions {
-    pub fn usage(&self) -> String {
-        format!("Usage: {0}
-    -help               - print this help
-    -contains (-c)      - grep for string in found files
-    -ignore-case (-i)   - ignore case when greping
-    -iname (-in)        - ignore case of filenames
-    -save-config        - write the default config
-                          into {1}
-    -debug              - print the find command line
-    -<int>              - limit find to a max depth of <int>
-", self.progname, "TBD")
-    }
-
     pub fn new(args: &[String]) -> Result<CommandOptions, String> {
         let mut iargs = args.iter();
 
@@ -50,8 +37,6 @@ impl CommandOptions {
         let mut looking_for_opts = true;
 
         while let Some(arg) = iargs.next() {
-            println!("Arg: {arg}");
-
             if looking_for_opts && arg.starts_with("-") {
                 if "--" == arg {
                     looking_for_opts = false;
@@ -101,5 +86,18 @@ impl CommandOptions {
         }
 
         Ok(opt)
+    }
+
+    pub fn usage(&self) -> String {
+        format!("Usage: {0}
+    -help               - print this help
+    -contains (-c)      - grep for string in found files
+    -ignore-case (-i)   - ignore case when greping
+    -iname (-in)        - ignore case of filenames
+    -save-config        - write the default config
+                          into {1}
+    -debug              - print the find command line
+    -<int>              - limit find to a max depth of <int>
+", self.progname, "TBD")
     }
 }

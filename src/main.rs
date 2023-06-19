@@ -14,7 +14,17 @@ fn main() -> ExitCode {
         }
     };
 
-    match sfind::run(cmd_opt) {
+    let cfg = match sfind::ConfigJson::new() {
+        Ok(cfg) => cfg,
+        Err(error) => {
+            println!("Error: {error}");
+            return ExitCode::from(1);
+        }
+    };
+
+    println!("cfg is {:?}", cfg);
+
+    match sfind::run(cmd_opt, cfg) {
         Ok(_) => {
             return ExitCode::SUCCESS;
         }

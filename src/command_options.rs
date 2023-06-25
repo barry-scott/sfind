@@ -1,16 +1,17 @@
 use std::path::PathBuf;
+use crate::config_json::AppConfig;
 
 #[derive(Debug)]
 pub struct CommandOptions {
     pub progname:           String,
     pub debug:              bool,
-    pub save_config:        bool,
+    pub save_default_config:bool,
     pub usage:              bool,
     pub find_iname:         bool,
     pub grep_ignore_case:   bool,
-    pub lines_after:        Option<u32>,
-    pub lines_before:       Option<u32>,
-    pub depth:              Option<u32>,
+    pub grep_lines_after:   Option<u32>,
+    pub grep_lines_before:  Option<u32>,
+    pub find_depth:         Option<u32>,
     pub file_contains:      Vec<String>,
     pub folders:            Vec<PathBuf>,
     pub files:              Vec<PathBuf>,
@@ -30,13 +31,13 @@ impl CommandOptions {
         let mut opt = CommandOptions {
             progname:           progname,
             debug:              false,
-            save_config:        false,
+            save_default_config:false,
             usage:              false,
             find_iname:         false,
             grep_ignore_case:   false,
-            lines_after:        Option::None,
-            lines_before:       Option::None,
-            depth:              Option::None,
+            grep_lines_after:   Option::None,
+            grep_lines_before:  Option::None,
+            find_depth:         Option::None,
             file_contains:      vec![],
             folders:            vec![],
             files:              vec![],
@@ -52,8 +53,8 @@ impl CommandOptions {
                 else if "-debug" == arg {
                     opt.debug = true;
                 }
-                else if "-save-config" == arg {
-                    opt.save_config = true;
+                else if "-save-default-config" == arg {
+                    opt.save_default_config = true;
                 }
                 else if "-help".starts_with(arg) && arg.len() >= 2 {
                     opt.usage = true;
@@ -79,7 +80,7 @@ impl CommandOptions {
                 else if "-after".starts_with( arg ) && arg.len() >= 2 {
                     match Self::parse_integer_arg(iargs.next(), "-after") {
                         Ok(value) => {
-                            opt.lines_after = Some(value);
+                            opt.grep_lines_after = Some(value);
                         }
                         Err(err) => {
                             return Err(err);
@@ -89,7 +90,7 @@ impl CommandOptions {
                 else if "-before".starts_with( arg ) && arg.len() >= 2 {
                     match Self::parse_integer_arg(iargs.next(), "-before") {
                         Ok(value) => {
-                            opt.lines_before = Some(value);
+                            opt.grep_lines_before = Some(value);
                         }
                         Err(err) => {
                             return Err(err);
@@ -99,7 +100,7 @@ impl CommandOptions {
                 else if "-depth".starts_with( arg ) && arg.len() >= 2 {
                     match Self::parse_integer_arg(iargs.next(), "-depth") {
                         Ok(value) => {
-                            opt.depth = Some(value);
+                            opt.find_depth = Some(value);
                         }
                         Err(err) => {
                             return Err(err);
@@ -109,7 +110,7 @@ impl CommandOptions {
                 // look for -<int>
                 else if match arg[1..].parse::<u32>() {
                     Ok(value) => {
-                        opt.depth = Some(value);
+                        opt.find_depth = Some(value);
                         true
                     }
                     Err(_) => false
@@ -148,19 +149,30 @@ impl CommandOptions {
         }
     }
 
-    pub fn usage(&self) -> String {
-        format!("Usage: {0}
-    -help               - print this help
-    -contains (-c)      - grep for string in found files
-    -after <int> (-a)   - some <int> lines after match
-    -before <int> (-b)  - some <int> lines before match
-    -ignore-case (-i)   - ignore case when greping
-    -iname (-in)        - ignore case of filenames
-    -save-config        - write the default config
-                          into {1}
-    -debug              - print the find command line
-    -depth <int> (-d)   - limit find to a max depth of <int>
-    -<int>              - limit find to a max depth of <int>
-", self.progname, "TBD")
+    pub fn usage(&self, app_config: &AppConfig) -> String {
+        format!(r#"Usage: {0} [<dir>...] [<filename>...] [options]...
+    Search for all <filename>'s in all <dir>'s
+    If -contains is present grep for all <patterns> in the found files.
+
+    -help                       - print this help
+    -contains <pattern> (-c)    - grep for string in found files
+    -after <int> (-a)           - some <int> lines after match
+    -before <int> (-b)          - some <int> lines before match
+    -ignore-case (-i)           - ignore case when greping
+    -iname (-in)                - ignore case of filenames
+    -save-default-config        - write the default config
+                                  into {1}
+    -depth <int> (-d, -<int>)   - limit find to a max depth of <int>
+    -debug                      - print debug messages
+
+    The JSON config file allows for pruning filenames and folders.
+
+    Example:
+    {{
+        "folders_to_prune": [".svn", ".git", ".hg"],
+        "files_to_prune":   ["*~"]
+    }}
+
+"#, self.progname, app_config.config_file_path().display())
     }
 }

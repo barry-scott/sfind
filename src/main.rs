@@ -14,9 +14,11 @@ fn main() -> ExitCode {
         }
     };
 
-    dbg!(&cmd_opt);
+    if cmd_opt.debug {
+        dbg!(&cmd_opt);
+    };
 
-    let cfg = match sfind::ConfigJson::new() {
+    let cfg = match sfind::AppConfig::new("org.barrys-emacs.smart-find") {
         Ok(cfg) => cfg,
         Err(error) => {
             println!("Error: {error}");
@@ -24,7 +26,9 @@ fn main() -> ExitCode {
         }
     };
 
-    dbg!(&cfg);
+    if cmd_opt.debug {
+        dbg!(&cfg);
+    };
 
     match sfind::run(cmd_opt, cfg) {
         Ok(_) => {
@@ -36,4 +40,3 @@ fn main() -> ExitCode {
         }
     }
 }
-

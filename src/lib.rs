@@ -7,19 +7,23 @@ pub use command_options::CommandOptions as CommandOptions;
 
 pub mod config_json;
 pub use config_json::ConfigJson as ConfigJson;
+pub use config_json::AppConfig as AppConfig;
 
-pub fn run(opt: CommandOptions, cfg: ConfigJson) -> Result<(), String> {
+pub fn run(opt: CommandOptions, cfg: AppConfig) -> Result<(), String> {
     if opt.usage {
-        println!("{}", opt.usage());
+        println!("{}", opt.usage(&cfg));
         return Ok(());
     }
 
-    if opt.save_config {
-        return Err(String::from("TBD save config file"));
+    if opt.save_default_config {
+        match cfg.save_default_config() {
+            Ok(_) => return Ok(()),
+            Err(e) => return Err(e.to_string())
+        }
     }
 
     let mut cmd = Command::new("/usr/bin/find");
-    build_command(&mut cmd, &opt, &cfg);
+    build_command(&mut cmd, &opt, &cfg.config);
 
     if opt.debug {
         let mut stdout = BufWriter::new(io::stdout());
@@ -32,7 +36,6 @@ pub fn run(opt: CommandOptions, cfg: ConfigJson) -> Result<(), String> {
         let _ = stdout.write("\n".as_bytes());
         let _ = stdout.flush();
     };
-
 
     let proc = match cmd.spawn() {
         Ok(child) => child,
@@ -79,7 +82,7 @@ fn build_command(cmd: &mut Command, opt: &CommandOptions, cfg: &ConfigJson) {
     for folder in opt.folders.iter() {
         let _ = cmd.arg(folder);
     }
-    match opt.depth {
+    match opt.find_depth {
         Some(depth) => {
             let _ = cmd.arg("-maxdepth").arg(depth.to_string());
         },
@@ -127,13 +130,13 @@ fn build_command(cmd: &mut Command, opt: &CommandOptions, cfg: &ConfigJson) {
             let _ = cmd.arg("--ignore-case");
         };
 
-        match opt.lines_after {
+        match opt.grep_lines_after {
             Some(lines) => {
                 let _ = cmd.arg(format!("--after-context={}", lines));
             },
             None => {}
         };
-        match opt.lines_before {
+        match opt.grep_lines_before {
             Some(lines) => {
                 let _ = cmd.arg(format!("--before-context={}", lines));
             },

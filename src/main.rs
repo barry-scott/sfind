@@ -14,6 +14,8 @@ fn main() -> ExitCode {
         }
     };
 
+    dbg!(&cmd_opt);
+
     let cfg = match sfind::ConfigJson::new() {
         Ok(cfg) => cfg,
         Err(error) => {
@@ -22,7 +24,7 @@ fn main() -> ExitCode {
         }
     };
 
-    println!("cfg is {:?}", cfg);
+    dbg!(&cfg);
 
     match sfind::run(cmd_opt, cfg) {
         Ok(_) => {

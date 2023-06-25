@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 #[derive(Debug)]
 pub struct CommandOptions {
     pub progname:           String,
@@ -6,9 +8,12 @@ pub struct CommandOptions {
     pub usage:              bool,
     pub find_iname:         bool,
     pub grep_ignore_case:   bool,
+    pub lines_after:        Option<u32>,
+    pub lines_before:       Option<u32>,
     pub depth:              Option<u32>,
     pub file_contains:      Vec<String>,
-    pub files:              Vec<String>,
+    pub folders:            Vec<PathBuf>,
+    pub files:              Vec<PathBuf>,
 }
 
 impl CommandOptions {
@@ -29,8 +34,11 @@ impl CommandOptions {
             usage:              false,
             find_iname:         false,
             grep_ignore_case:   false,
+            lines_after:        Option::None,
+            lines_before:       Option::None,
             depth:              Option::None,
             file_contains:      vec![],
+            folders:            vec![],
             files:              vec![],
         };
 
@@ -50,6 +58,9 @@ impl CommandOptions {
                 else if "-help".starts_with(arg) && arg.len() >= 2 {
                     opt.usage = true;
                 }
+                else if "--help" == arg {
+                    opt.usage = true;
+                }
                 else if "-iname".starts_with( arg ) && arg.len() >= 3 {
                     opt.find_iname = true
                 }
@@ -65,6 +76,36 @@ impl CommandOptions {
                     };
                     opt.file_contains.push(contains.clone())
                 }
+                else if "-after".starts_with( arg ) && arg.len() >= 2 {
+                    match Self::parse_integer_arg(iargs.next(), "-after") {
+                        Ok(value) => {
+                            opt.lines_after = Some(value);
+                        }
+                        Err(err) => {
+                            return Err(err);
+                        }
+                    };
+                }
+                else if "-before".starts_with( arg ) && arg.len() >= 2 {
+                    match Self::parse_integer_arg(iargs.next(), "-before") {
+                        Ok(value) => {
+                            opt.lines_before = Some(value);
+                        }
+                        Err(err) => {
+                            return Err(err);
+                        }
+                    };
+                }
+                else if "-depth".starts_with( arg ) && arg.len() >= 2 {
+                    match Self::parse_integer_arg(iargs.next(), "-depth") {
+                        Ok(value) => {
+                            opt.depth = Some(value);
+                        }
+                        Err(err) => {
+                            return Err(err);
+                        }
+                    };
+                }
                 // look for -<int>
                 else if match arg[1..].parse::<u32>() {
                     Ok(value) => {
@@ -72,31 +113,53 @@ impl CommandOptions {
                         true
                     }
                     Err(_) => false
-                } {
-                    true;
-                }
+                } {}
                 else {
                     return Err(format!("Unknown options \"{arg}\""));
                 }
             }
             else {
-                // assume its a file for now
-                opt.files.push(arg.clone());
+                let path = PathBuf::from(arg);
+
+                if path.is_dir() {
+                    opt.folders.push(path);
+                } else {
+                    opt.files.push(path);
+                }
             }
         }
 
+        if opt.folders.len() == 0 {
+            opt.folders.push(PathBuf::from("."));
+        }
+
         Ok(opt)
+    }
+
+    fn parse_integer_arg(arg: Option<&String>, opt_name: &str) -> Result<u32, String> {
+        match arg {
+            Some(value) => {
+                match value.parse::<u32>() {
+                    Ok(value) => Ok(value),
+                    Err(err) => Err(format!("argument to {opt_name} must be an integer - {err}"))
+                }
+            }
+            None => Err(format!("expecting <int> argument to {opt_name}"))
+        }
     }
 
     pub fn usage(&self) -> String {
         format!("Usage: {0}
     -help               - print this help
     -contains (-c)      - grep for string in found files
+    -after <int> (-a)   - some <int> lines after match
+    -before <int> (-b)  - some <int> lines before match
     -ignore-case (-i)   - ignore case when greping
     -iname (-in)        - ignore case of filenames
     -save-config        - write the default config
                           into {1}
     -debug              - print the find command line
+    -depth <int> (-d)   - limit find to a max depth of <int>
     -<int>              - limit find to a max depth of <int>
 ", self.progname, "TBD")
     }

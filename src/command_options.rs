@@ -98,31 +98,4 @@ impl CommandOptions {
 
         Ok(opt)
     }
-
-    pub fn usage(&self, app_config: &AppConfig) -> Result<String> {
-        Ok(format!(r#"Usage: {0} [<dir>...] [<filename>...] [options]...
-    Search for all <filename>'s in all <dir>'s
-    If -contains is present grep for all <patterns> in the found files.
-
-    -help                       - print this help
-    -contains <pattern> (-c)    - grep for string in found files
-    -after <int> (-a)           - some <int> lines after match
-    -before <int> (-b)          - some <int> lines before match
-    -ignore-case (-i)           - ignore case when greping
-    -iname (-in)                - ignore case of filenames
-    -save-default-config        - write the default config
-                                  into {1}
-    -depth <int> (-d, -<int>)   - limit find to a max depth of <int>
-    -debug                      - print debug messages
-
-    The JSON config file allows for pruning filenames and folders.
-
-    Example:
-    {{
-        "folders_to_prune": [".svn", ".git", ".hg"],
-        "files_to_prune":   ["*~"]
-    }}
-
-"#, self.progname, app_config.config_file_path()?.display()))
-    }
 }

@@ -11,11 +11,6 @@ pub use config_json::ConfigJson as ConfigJson;
 pub use config_json::AppConfig as AppConfig;
 
 pub fn run(opt: CommandOptions, cfg: AppConfig) -> Result<()> {
-    if opt.usage {
-        println!("{}", opt.usage(&cfg)?);
-        return Ok(());
-    }
-
     if opt.save_default_config {
         cfg.save_default_config()?;
     }
@@ -115,7 +110,7 @@ fn build_command(cmd: &mut Command, opt: &CommandOptions, cfg: &ConfigJson) {
         let _ = cmd.arg("!").arg("-name").arg(file);
     };
 
-    if opt.file_contains.len() > 0 {
+    if opt.regex_pattern.len() > 0 || opt.fixed_string.len() > 0 {
         // turn kill to end of line in the output with ne
         // fn=:ln=:se=99 marks the : with \e[99m:\e[m
         let _ = cmd.env("GREP_COLORS", "ne:fn=:ln=:se=99");
@@ -139,8 +134,11 @@ fn build_command(cmd: &mut Command, opt: &CommandOptions, cfg: &ConfigJson) {
         };
 
         let _ = cmd.arg("--color=always").arg("--with-filename").arg("--line-number");
-        for pattern in opt.file_contains.iter() {
+        for pattern in opt.regex_pattern.iter() {
             let _ = cmd.arg("-e").arg(pattern);
+        };
+        for pattern in opt.fixed_string.iter() {
+            let _ = cmd.arg("-F").arg(pattern);
         };
         let _ = cmd.arg("{}").arg("+");
     };

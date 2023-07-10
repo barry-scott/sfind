@@ -1,19 +1,58 @@
 use std::path::PathBuf;
 use crate::config_json::AppConfig;
 use anyhow::{Result, anyhow};
+use clap::{Parser};
+
+#[derive(Debug)]
+#[derive(Parser)]
+#[command(name = "sfind")]
+#[command(version = "1.0")]
+#[command(about = "smart find", long_about=r#"Search for all <filename>'s in all <dir>'s
+    If -contains is present grep for all <patterns> in the found files."#)]
+struct Cli {
+    #[arg(long)]
+    pub debug:                      bool,
+
+    #[arg(long, help="write the default config info <TBD>")]
+    pub save_default_config:        bool,
+
+    #[arg(short='S', long="asis", help="find file names matching case")]
+    pub case_sensitive_filenames:   bool,
+
+    #[arg(short='s', long="sensitive", help="match regex case sensitively")]
+    pub case_sensitive_contents:    bool,
+
+    #[arg(short, long, value_name="LINES", help="lines to show after match")]
+    pub after:                      Option<u32>,
+
+    #[arg(short, long, value_name="LINES", help="lines to show before match")]
+    pub before:                     Option<u32>,
+
+    #[arg(short, long, help="number of folder levels to search")]
+    pub depth:                      Option<u32>,
+
+    #[arg(short, long, value_name="REGEX", help="regex pattern to find")]
+    pub regex:                      Vec<String>,
+
+    #[arg(short, long, value_name="STR", help="fixed string to find")]
+    pub fixed:                      Vec<String>,
+
+    #[arg(value_name="PATH", help="Files and Folders to find")]
+    pub positional:                 Vec<PathBuf>,
+}
 
 #[derive(Debug)]
 pub struct CommandOptions {
     pub progname:               String,
     pub debug:                  bool,
-    pub usage:                  bool,
     pub save_default_config:    bool,
     pub find_iname:             bool,
     pub grep_ignore_case:       bool,
     pub grep_lines_after:       Option<u32>,
     pub grep_lines_before:      Option<u32>,
     pub find_depth:             Option<u32>,
-    pub file_contains:          Vec<String>,
+    pub regex_pattern:          Vec<String>,
+    pub fixed_string:           Vec<String>,
     pub folders:                Vec<PathBuf>,
     pub files:                  Vec<PathBuf>,
 }
@@ -29,84 +68,27 @@ impl CommandOptions {
             }
         };
 
+        let cli = Cli::try_parse()?;
         let mut opt = CommandOptions {
-            progname:           progname,
-            debug:              false,
-            save_default_config:false,
-            usage:              false,
-            find_iname:         false,
-            grep_ignore_case:   false,
-            grep_lines_after:   Option::None,
-            grep_lines_before:  Option::None,
-            find_depth:         Option::None,
-            file_contains:      vec![],
-            folders:            vec![],
-            files:              vec![],
+            progname:               progname,
+            debug:                  cli.debug,
+            save_default_config:    cli.save_default_config,
+            find_iname:             !cli.case_sensitive_filenames,
+            grep_ignore_case:       !cli.case_sensitive_contents,
+            grep_lines_after:       cli.after,
+            grep_lines_before:      cli.before,
+            find_depth:             cli.depth,
+            regex_pattern:          cli.regex,
+            fixed_string:           cli.fixed,
+            folders:                vec![],
+            files:                  vec![],
         };
 
-        let mut looking_for_opts = true;
-
-        while let Some(arg) = iargs.next() {
-            if looking_for_opts && arg.starts_with("-") {
-                if "--" == arg {
-                    looking_for_opts = false;
-                }
-                else if "-debug" == arg {
-                    opt.debug = true;
-                }
-                else if "-save-default-config" == arg {
-                    opt.save_default_config = true;
-                }
-                else if "-help".starts_with(arg) && arg.len() >= 2 {
-                    opt.usage = true;
-                }
-                else if "--help" == arg {
-                    opt.usage = true;
-                }
-                else if "-iname".starts_with( arg ) && arg.len() >= 3 {
-                    opt.find_iname = true
-                }
-                else if "-ignore-case".starts_with( arg ) && arg.len() >= 2 {
-                    opt.grep_ignore_case = true
-                }
-                else if "-contains".starts_with( arg ) && arg.len() >= 2 {
-                    let contains = match iargs.next() {
-                        Some(arg) => arg,
-                        None => {
-                            return Err(anyhow!("missing argument to -contains"));
-                        }
-                    };
-                    opt.file_contains.push(contains.clone())
-                }
-                else if "-after".starts_with( arg ) && arg.len() >= 2 {
-                    opt.grep_lines_after = Some(Self::parse_integer_arg(iargs.next(), "-after")?);
-                }
-                else if "-before".starts_with( arg ) && arg.len() >= 2 {
-                    opt.grep_lines_before = Some(Self::parse_integer_arg(iargs.next(), "-before")?);
-                }
-                else if "-depth".starts_with( arg ) && arg.len() >= 2 {
-                    opt.find_depth = Some(Self::parse_integer_arg(iargs.next(), "-depth")?);
-                }
-                // look for -<int>
-                else if match arg[1..].parse::<u32>() {
-                    Ok(value) => {
-                        opt.find_depth = Some(value);
-                        true
-                    }
-                    Err(_) => false
-                } {}
-                else {
-                    return Err(anyhow!("Unknown options \"{arg}\""));
-                }
-            }
-            else {
-                let path = PathBuf::from(arg);
-
-                if path.is_dir() {
-                    opt.folders.push(path);
-                } else {
-                    opt.files.push(path);
-                }
+        for path in cli.positional {
+            if path.is_dir() {
+                opt.folders.push(path);
+            } else {
+                opt.files.push(path);
             }
         }
 
@@ -115,18 +97,6 @@ impl CommandOptions {
         }
 
         Ok(opt)
-    }
-
-    fn parse_integer_arg(arg: Option<&String>, opt_name: &str) -> Result<u32> {
-        match arg {
-            Some(value) => {
-                match value.parse::<u32>() {
-                    Ok(value) => Ok(value),
-                    Err(err) => Err(anyhow!("argument to {opt_name} must be an integer - {err}"))
-                }
-            }
-            None => Err(anyhow!("expecting <int> argument to {opt_name}"))
-        }
     }
 
     pub fn usage(&self, app_config: &AppConfig) -> Result<String> {

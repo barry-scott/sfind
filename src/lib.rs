@@ -1,6 +1,7 @@
 use std::process::{Command, Stdio};
 use std::io::{BufRead, BufReader, BufWriter};
 use std::io::{self, Write};
+use anyhow::Result;
 
 pub mod command_options;
 pub use command_options::CommandOptions as CommandOptions;
@@ -9,17 +10,14 @@ pub mod config_json;
 pub use config_json::ConfigJson as ConfigJson;
 pub use config_json::AppConfig as AppConfig;
 
-pub fn run(opt: CommandOptions, cfg: AppConfig) -> Result<(), String> {
+pub fn run(opt: CommandOptions, cfg: AppConfig) -> Result<()> {
     if opt.usage {
-        println!("{}", opt.usage(&cfg));
+        println!("{}", opt.usage(&cfg)?);
         return Ok(());
     }
 
     if opt.save_default_config {
-        match cfg.save_default_config() {
-            Ok(_) => return Ok(()),
-            Err(e) => return Err(e.to_string())
-        }
+        cfg.save_default_config()?;
     }
 
     let mut cmd = Command::new("/usr/bin/find");
@@ -37,10 +35,7 @@ pub fn run(opt: CommandOptions, cfg: AppConfig) -> Result<(), String> {
         let _ = stdout.flush();
     };
 
-    let proc = match cmd.spawn() {
-        Ok(child) => child,
-        Err(err) => return Err(err.to_string())
-    };
+    let proc = cmd.spawn()?;
 
     let mut stdout = BufReader::new(proc.stdout.unwrap());
 

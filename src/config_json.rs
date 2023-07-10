@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use std::fs;
 use std::fs::File;
 use std::io::prelude::*;
-use std::io;
+use anyhow::{Result, anyhow};
 
 #[derive(serde::Deserialize, Debug)]
 pub struct ConfigJson {
@@ -26,14 +26,14 @@ static DEFAULT_CONFIG_JSON: &str = r#"{
 "#;
 
 impl AppConfig {
-    pub fn new(app_name: &str) -> Result<AppConfig, String> {
-        let config_path = config_file_path(&app_name);
+    pub fn new(app_name: &str) -> Result<AppConfig> {
+        let config_path = config_file_path(&app_name)?;
 
         let mut config_data = String::new();
         if config_path.exists() {
             match fs::read_to_string(&config_path) {
                 Ok(data) => { config_data.push_str(&data) },
-                Err(e) => { return Err(format!("Error reading {} - {}", &config_path.display(), e.to_string())) }
+                Err(e) => { return Err(anyhow!("Error reading {} - {}", &config_path.display(), e.to_string())) }
             };
         } else {
             config_data.push_str(DEFAULT_CONFIG_JSON);
@@ -43,22 +43,22 @@ impl AppConfig {
             app_name: app_name.to_string(),
             config: match serde_json::from_str(&config_data) {
                 Ok(config) => config,
-                Err(e) => { return Err(format!("Error parsing config {} - {}", &config_path.display(), e.to_string())) }
+                Err(e) => { return Err(anyhow!("Error parsing config {} - {}", &config_path.display(), e.to_string())) }
             }
         };
         Ok(app_config)
     }
 
-    pub fn config_file_path(&self) -> PathBuf {
-        config_file_path(&self.app_name)
+    pub fn config_file_path(&self) -> Result<PathBuf> {
+        Ok(config_file_path(&self.app_name)?)
     }
 
 
-    pub fn save_default_config(&self) -> std::io::Result<()> {
-        let config_path = self.config_file_path();
+    pub fn save_default_config(&self) -> Result<()> {
+        let config_path = self.config_file_path()?;
 
         if config_path.exists() {
-            return Err(io::Error::new(io::ErrorKind::Other, "config file already exists"));
+            return Err(anyhow!("config file already exists"));
         }
 
         let mut f = File::create(config_path)?;
@@ -67,10 +67,12 @@ impl AppConfig {
     }
 }
 
-fn config_file_path(app_name: &str) -> PathBuf {
-    let xdg_dirs = xdg::BaseDirectories::new().unwrap();
+fn config_file_path(app_name: &str) -> Result<PathBuf> {
+    let xdg_dirs = xdg::BaseDirectories::new()?;
 
-    PathBuf::from(xdg_dirs.place_config_file(format!("{}.json", &app_name)).unwrap())
+    Ok(PathBuf::from(
+        xdg_dirs.place_config_file(
+            format!("{}.json", &app_name))?))
 }
 
 #[cfg(target_os = "macos")]

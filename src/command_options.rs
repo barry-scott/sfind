@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 use crate::config_json::AppConfig;
+use anyhow::Result;
 
 #[derive(Debug)]
 pub struct CommandOptions {
@@ -149,8 +150,8 @@ impl CommandOptions {
         }
     }
 
-    pub fn usage(&self, app_config: &AppConfig) -> String {
-        format!(r#"Usage: {0} [<dir>...] [<filename>...] [options]...
+    pub fn usage(&self, app_config: &AppConfig) -> Result<String> {
+        Ok(format!(r#"Usage: {0} [<dir>...] [<filename>...] [options]...
     Search for all <filename>'s in all <dir>'s
     If -contains is present grep for all <patterns> in the found files.
 
@@ -173,6 +174,6 @@ impl CommandOptions {
         "files_to_prune":   ["*~"]
     }}
 
-"#, self.progname, app_config.config_file_path().display())
+"#, self.progname, app_config.config_file_path()?.display()))
     }
 }

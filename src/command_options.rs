@@ -1,31 +1,31 @@
 use std::path::PathBuf;
 use crate::config_json::AppConfig;
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 
 #[derive(Debug)]
 pub struct CommandOptions {
-    pub progname:           String,
-    pub debug:              bool,
-    pub save_default_config:bool,
-    pub usage:              bool,
-    pub find_iname:         bool,
-    pub grep_ignore_case:   bool,
-    pub grep_lines_after:   Option<u32>,
-    pub grep_lines_before:  Option<u32>,
-    pub find_depth:         Option<u32>,
-    pub file_contains:      Vec<String>,
-    pub folders:            Vec<PathBuf>,
-    pub files:              Vec<PathBuf>,
+    pub progname:               String,
+    pub debug:                  bool,
+    pub usage:                  bool,
+    pub save_default_config:    bool,
+    pub find_iname:             bool,
+    pub grep_ignore_case:       bool,
+    pub grep_lines_after:       Option<u32>,
+    pub grep_lines_before:      Option<u32>,
+    pub find_depth:             Option<u32>,
+    pub file_contains:          Vec<String>,
+    pub folders:                Vec<PathBuf>,
+    pub files:                  Vec<PathBuf>,
 }
 
 impl CommandOptions {
-    pub fn new(args: &[String]) -> Result<CommandOptions, String> {
+    pub fn new(args: &[String]) -> Result<CommandOptions> {
         let mut iargs = args.iter();
 
         let progname = match iargs.next() {
             Some(arg) => arg.clone(),
             None => {
-                return Err(String::from("missing progname in command arguments"));
+                return Err(anyhow!("missing progname in command arguments"));
             }
         };
 
@@ -73,40 +73,19 @@ impl CommandOptions {
                     let contains = match iargs.next() {
                         Some(arg) => arg,
                         None => {
-                            return Err(String::from("missing argument to -contains"));
+                            return Err(anyhow!("missing argument to -contains"));
                         }
                     };
                     opt.file_contains.push(contains.clone())
                 }
                 else if "-after".starts_with( arg ) && arg.len() >= 2 {
-                    match Self::parse_integer_arg(iargs.next(), "-after") {
-                        Ok(value) => {
-                            opt.grep_lines_after = Some(value);
-                        }
-                        Err(err) => {
-                            return Err(err);
-                        }
-                    };
+                    opt.grep_lines_after = Some(Self::parse_integer_arg(iargs.next(), "-after")?);
                 }
                 else if "-before".starts_with( arg ) && arg.len() >= 2 {
-                    match Self::parse_integer_arg(iargs.next(), "-before") {
-                        Ok(value) => {
-                            opt.grep_lines_before = Some(value);
-                        }
-                        Err(err) => {
-                            return Err(err);
-                        }
-                    };
+                    opt.grep_lines_before = Some(Self::parse_integer_arg(iargs.next(), "-before")?);
                 }
                 else if "-depth".starts_with( arg ) && arg.len() >= 2 {
-                    match Self::parse_integer_arg(iargs.next(), "-depth") {
-                        Ok(value) => {
-                            opt.find_depth = Some(value);
-                        }
-                        Err(err) => {
-                            return Err(err);
-                        }
-                    };
+                    opt.find_depth = Some(Self::parse_integer_arg(iargs.next(), "-depth")?);
                 }
                 // look for -<int>
                 else if match arg[1..].parse::<u32>() {
@@ -117,7 +96,7 @@ impl CommandOptions {
                     Err(_) => false
                 } {}
                 else {
-                    return Err(format!("Unknown options \"{arg}\""));
+                    return Err(anyhow!("Unknown options \"{arg}\""));
                 }
             }
             else {
@@ -138,15 +117,15 @@ impl CommandOptions {
         Ok(opt)
     }
 
-    fn parse_integer_arg(arg: Option<&String>, opt_name: &str) -> Result<u32, String> {
+    fn parse_integer_arg(arg: Option<&String>, opt_name: &str) -> Result<u32> {
         match arg {
             Some(value) => {
                 match value.parse::<u32>() {
                     Ok(value) => Ok(value),
-                    Err(err) => Err(format!("argument to {opt_name} must be an integer - {err}"))
+                    Err(err) => Err(anyhow!("argument to {opt_name} must be an integer - {err}"))
                 }
             }
-            None => Err(format!("expecting <int> argument to {opt_name}"))
+            None => Err(anyhow!("expecting <int> argument to {opt_name}"))
         }
     }
 

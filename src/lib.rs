@@ -3,6 +3,9 @@ use std::io::{BufRead, BufReader, BufWriter};
 use std::io::{self, Write};
 use anyhow::Result;
 
+pub mod find_files;
+pub use find_files::FindFiles;
+
 pub mod command_options;
 pub use command_options::CommandOptions as CommandOptions;
 
@@ -11,6 +14,14 @@ pub use config_json::ConfigJson as ConfigJson;
 pub use config_json::AppConfig as AppConfig;
 
 pub fn run(opt: CommandOptions, cfg: AppConfig) -> Result<()> {
+    for path in FindFiles::new(&opt, &cfg.config) {
+        println!("{}", path.display());
+    }
+
+    Ok(())
+}
+
+pub fn run_find_grep(opt: CommandOptions, cfg: AppConfig) -> Result<()> {
     if opt.save_default_config {
         cfg.save_default_config()?;
     }

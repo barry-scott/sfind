@@ -74,8 +74,3 @@ fn config_file_path(app_name: &str) -> Result<PathBuf> {
         xdg_dirs.place_config_file(
             format!("{}.json", &app_name))?))
 }
-
-#[cfg(target_os = "macos")]
-fn macos_only() {
-  // ...
-}

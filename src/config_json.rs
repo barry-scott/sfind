@@ -74,7 +74,7 @@ use std::env;
 fn config_file_path(app_name: &str) -> Result<PathBuf> {
     let home_dir = env::var("HOME")?;
     Ok(PathBuf::from(
-        format!("{}/Library/Preferences/{}.json", home_dir, &app_name))?)
+        format!("{}/Library/Preferences/{}.json", home_dir, &app_name)))
 }
 
 #[cfg(target_os = "linux")]

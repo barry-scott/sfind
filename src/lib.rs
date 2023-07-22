@@ -10,7 +10,6 @@ pub mod command_options;
 pub use command_options::CommandOptions as CommandOptions;
 
 pub mod config_json;
-pub use config_json::ConfigJson as ConfigJson;
 pub use config_json::AppConfig as AppConfig;
 
 pub fn run(opt: CommandOptions, cfg: AppConfig) -> Result<()> {

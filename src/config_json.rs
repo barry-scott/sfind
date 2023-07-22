@@ -1,6 +1,5 @@
 use serde;
 use serde_json;
-use xdg;
 use std::path::PathBuf;
 use std::fs;
 use std::fs::File;
@@ -67,6 +66,21 @@ impl AppConfig {
     }
 }
 
+
+#[cfg(target_os = "macos")]
+use std::env;
+
+#[cfg(target_os = "macos")]
+fn config_file_path(app_name: &str) -> Result<PathBuf> {
+    let home_dir = env::var("HOME")?;
+    Ok(PathBuf::from(
+        format!("{}/Library/Preferences/{}.json", home_dir, &app_name))?)
+}
+
+#[cfg(target_os = "linux")]
+use xdg;
+
+#[cfg(target_os = "linux")]
 fn config_file_path(app_name: &str) -> Result<PathBuf> {
     let xdg_dirs = xdg::BaseDirectories::new()?;
 

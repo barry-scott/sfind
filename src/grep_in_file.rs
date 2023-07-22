@@ -64,7 +64,7 @@ impl <'caller> GrepPatterns {
         None
     }
 
-    fn quote_regex(text: &String) -> String {
+    fn quote_regex(text: &str) -> String {
         let mut regex_pattern = String::new();
 
         for ch in text.chars() {
@@ -170,6 +170,6 @@ mod tests {
     fn quote_regex() {
         assert_eq!(GrepPatterns::quote_regex("fixed"), "fixed");
         assert_eq!(GrepPatterns::quote_regex("file.type"), "file\\.type");
-        assert_eq!(GrepPatterns::quote_regex("*.type"), ".*\\.type");
+        assert_eq!(GrepPatterns::quote_regex("*.type"), "\\*\\.type");
     }
 }

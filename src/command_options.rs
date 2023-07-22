@@ -50,8 +50,8 @@ pub struct CommandOptions {
     pub grep_lines_after:       Option<u32>,
     pub grep_lines_before:      Option<u32>,
     pub find_depth:             Option<u32>,
-    pub regex_pattern:          Vec<String>,
-    pub fixed_string:           Vec<String>,
+    pub regex_patterns:         Vec<String>,
+    pub fixed_strings:          Vec<String>,
     pub folders:                Vec<PathBuf>,
     pub files:                  Vec<String>,
 }
@@ -77,8 +77,8 @@ impl CommandOptions {
             grep_lines_after:       cli.after,
             grep_lines_before:      cli.before,
             find_depth:             cli.depth,
-            regex_pattern:          cli.regex,
-            fixed_string:           cli.fixed,
+            regex_patterns:         cli.regex,
+            fixed_strings:          cli.fixed,
             folders:                vec![],
             files:                  vec![],
         };

@@ -260,7 +260,7 @@ impl <'caller> FindFiles<'caller> {
                 '[' | ']' | '{' | '}' | '^' | '$' | '#' => {
                     regex_pattern.push('\\');
                     regex_pattern.push(ch)
-                    }
+                }
                 _ => regex_pattern.push(ch)
             };
         }

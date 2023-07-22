@@ -53,7 +53,7 @@ pub struct CommandOptions {
     pub regex_pattern:          Vec<String>,
     pub fixed_string:           Vec<String>,
     pub folders:                Vec<PathBuf>,
-    pub files:                  Vec<PathBuf>,
+    pub files:                  Vec<String>,
 }
 
 impl CommandOptions {
@@ -87,7 +87,14 @@ impl CommandOptions {
             if path.is_dir() {
                 opt.folders.push(path);
             } else {
-                opt.files.push(path);
+                match path.to_str() {
+                    Some(file) => {
+                        opt.files.push(file.to_string());
+                    },
+                    None => {
+                        println!("filename is not utf-8 {}", path.display());
+                    }
+               };
             }
         }
 

@@ -22,13 +22,13 @@ struct Cli {
     pub case_sensitive_contents:    bool,
 
     #[arg(short, long, value_name="LINES", help="lines to show after match")]
-    pub after:                      Option<u32>,
+    pub after:                      Option<usize>,
 
     #[arg(short, long, value_name="LINES", help="lines to show before match")]
-    pub before:                     Option<u32>,
+    pub before:                     Option<usize>,
 
     #[arg(short, long, help="number of folder levels to search")]
-    pub depth:                      Option<u32>,
+    pub depth:                      Option<usize>,
 
     #[arg(short, long, value_name="REGEX", help="regex pattern to find")]
     pub regex:                      Vec<String>,
@@ -47,9 +47,9 @@ pub struct CommandOptions {
     pub save_default_config:    bool,
     pub find_iname:             bool,
     pub grep_ignore_case:       bool,
-    pub grep_lines_after:       Option<u32>,
-    pub grep_lines_before:      Option<u32>,
-    pub find_depth:             Option<u32>,
+    pub grep_lines_after:       Option<usize>,
+    pub grep_lines_before:      Option<usize>,
+    pub find_depth:             Option<usize>,
     pub regex_patterns:         Vec<String>,
     pub fixed_strings:          Vec<String>,
     pub folders:                Vec<PathBuf>,

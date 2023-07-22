@@ -10,13 +10,13 @@ pub use crate::config_json::ConfigJson as ConfigJson;
 #[derive(Debug)]
 struct PathToScan {
     pub path:           PathBuf,
-    pub depth:          u32,
+    pub depth:          usize,
 }
 
 pub struct FindFiles<'caller> {
     folders:            VecDeque<PathToScan>,
     cur_dir_entry:      Option<fs::ReadDir>,
-    cur_depth:          u32,
+    cur_depth:          usize,
     opt:                &'caller CommandOptions,
     folders_to_prune:   Option<Regex>,
     files_to_prune:     Option<Regex>,
@@ -24,7 +24,7 @@ pub struct FindFiles<'caller> {
 }
 
 impl PathToScan {
-    pub fn new(path: PathBuf, depth: u32) -> PathToScan {
+    pub fn new(path: PathBuf, depth: usize) -> PathToScan {
         PathToScan {
             path:   path,
             depth:  depth,

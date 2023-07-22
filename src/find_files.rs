@@ -298,14 +298,14 @@ mod tests {
     #[test]
     fn regex_vec_match() {
         let glob_patterns = vec!(String::from("*.txt"));
-        let regex = FindFiles::match_filenames_regex(&glob_patterns).unwrap();
+        let regex = FindFiles::match_filenames_regex(&glob_patterns, false).unwrap();
         assert_eq!(regex.as_str(), r#"^(.*\.txt)$"#);
 
         let haystack = String::from("abc.txt");
         assert!(regex.is_match(&haystack));
 
         let glob_patterns = vec!(String::from("*.txt"), String::from("*.rs"));
-        let regex = FindFiles::match_filenames_regex(&glob_patterns).unwrap();
+        let regex = FindFiles::match_filenames_regex(&glob_patterns, false).unwrap();
         assert_eq!(regex.as_str(), r#"^(.*\.txt|.*\.rs)$"#);
 
         assert!(regex.is_match(&haystack));

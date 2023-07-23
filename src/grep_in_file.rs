@@ -177,7 +177,7 @@ impl<'caller> GrepInFile<'caller> {
                     coloured_line.push_str(&line[m_start..last_end]);
                     coloured_line.push_str(GrepInFile::COLOUR_END);
                 }
-                coloured_line.push_str(&line[last_end..line.len()]);
+                coloured_line.push_str(&line[last_end..]);
 
                 self.print_match_line(self.line_number, ":", &coloured_line);
 

@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 use std::path::PathBuf;
 
 use std::io::{BufRead, BufReader};
-use std::{fs, iter};
+use std::{fs, iter, mem};
 
 use anyhow::{anyhow, Result};
 use regex::{Regex, RegexBuilder};
@@ -179,12 +179,13 @@ impl<'caller> GrepInFile<'caller> {
                     println!("find_match: {:?}", vec_m);
                 }
 
-                let mut line_number = self.line_number - self.before_lines.len();
+                let before_lines = mem::take(&mut self.before_lines);
+                let line_number_base = self.line_number - self.before_lines.len();
 
-                while let Some(line) = self.before_lines.pop_front() {
-                    self.print_match_line(line_number, "-", &line);
-                    line_number += 1;
+                for (offset, before_line) in before_lines.into_iter().enumerate() {
+                    self.print_match_line(line_number_base + offset, "-", &before_line);
                 }
+
                 self.print_match_line(self.line_number, ":", &colour_match_line(&line, &vec_m));
 
                 required_after = self.num_after;

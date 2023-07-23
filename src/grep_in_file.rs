@@ -30,32 +30,32 @@ pub struct GrepInFile<'caller> {
     num_after: usize,
 }
 
+fn fixed_to_regex(fixed: &str, case_insensitive: bool) -> Result<Regex> {
+    RegexBuilder::new(&GrepPatterns::quote_regex(fixed))
+        .case_insensitive(case_insensitive)
+        .build()
+        .map_err(|_| anyhow!("failed to compile regex for {}", fixed))
+}
+
+fn pattern_to_refex(pattern: &str, case_insensitive: bool) -> Result<Regex> {
+    RegexBuilder::new(pattern)
+        .case_insensitive(case_insensitive)
+        .build()
+        .map_err(|_| anyhow!("failed to compile regex for {}", pattern))
+}
+
 impl<'caller> GrepPatterns {
     pub fn new(opt: &CommandOptions) -> Result<GrepPatterns> {
         let mut gp = GrepPatterns { patterns: vec![] };
 
         for fixed in &opt.fixed_strings {
-            match RegexBuilder::new(&GrepPatterns::quote_regex(fixed))
-                .case_insensitive(opt.grep_ignore_case)
-                .build()
-            {
-                Ok(regex) => {
-                    gp.patterns.push(regex);
-                }
-                Err(_) => return Err(anyhow!("failed to compile regex for {}", fixed)),
-            }
+            gp.patterns
+                .push(fixed_to_regex(fixed, opt.grep_ignore_case)?);
         }
 
         for pattern in &opt.regex_patterns {
-            match RegexBuilder::new(pattern)
-                .case_insensitive(opt.grep_ignore_case)
-                .build()
-            {
-                Ok(regex) => {
-                    gp.patterns.push(regex);
-                }
-                Err(_) => return Err(anyhow!("failed to compile regex for {}", pattern)),
-            }
+            gp.patterns
+                .push(pattern_to_refex(pattern, opt.grep_ignore_case)?)
         }
 
         Ok(gp)

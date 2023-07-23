@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use regex::{Regex, RegexBuilder};
 
@@ -25,10 +25,7 @@ pub struct FindFiles<'caller> {
 
 impl PathToScan {
     pub fn new(path: PathBuf, depth: usize) -> PathToScan {
-        PathToScan {
-            path,
-            depth,
-        }
+        PathToScan { path, depth }
     }
 }
 
@@ -176,7 +173,7 @@ impl<'caller> FindFiles<'caller> {
         finder
     }
 
-    fn exclude_folder(&self, folder_path: &PathBuf) -> bool {
+    fn exclude_folder(&self, folder_path: &Path) -> bool {
         match &self.folders_to_prune {
             Some(regex) => {
                 let folder_name = match folder_path.file_name() {

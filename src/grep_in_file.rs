@@ -120,8 +120,6 @@ impl<'caller> GrepInFile<'caller> {
         file_path: &'caller PathBuf,
         patterns: &'caller GrepPatterns,
     ) -> GrepInFile<'caller> {
-        
-
         GrepInFile {
             opt,
             patterns,
@@ -170,14 +168,9 @@ impl<'caller> GrepInFile<'caller> {
 
                             let mut line_number = self.line_number - self.before_lines.len();
 
-                            loop {
-                                match self.before_lines.pop_front() {
-                                    Some(line) => {
-                                        self.print_match_line(line_number, "-", &line);
-                                        line_number += 1;
-                                    }
-                                    None => break,
-                                }
+                            while let Some(line) = self.before_lines.pop_front() {
+                                self.print_match_line(line_number, "-", &line);
+                                line_number += 1;
                             }
                             let mut coloured_line = String::new();
                             let mut last_end = 0;

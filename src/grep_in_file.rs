@@ -44,7 +44,7 @@ fn pattern_to_refex(pattern: &str, case_insensitive: bool) -> Result<Regex> {
         .map_err(|_| anyhow!("failed to compile regex for {}", pattern))
 }
 
-impl<'caller> GrepPatterns {
+impl GrepPatterns {
     pub fn new(opt: &CommandOptions) -> Result<GrepPatterns> {
         let fixed = opt
             .fixed_strings
@@ -61,7 +61,7 @@ impl<'caller> GrepPatterns {
         Ok(GrepPatterns { patterns })
     }
 
-    pub fn find_match(&'caller self, line: &'caller str) -> Option<Vec<GrepMatch>> {
+    pub fn find_match(&self, line: &str) -> Option<Vec<GrepMatch>> {
         let mut matches = Vec::new();
 
         for (index, regex) in self.patterns.iter().enumerate() {

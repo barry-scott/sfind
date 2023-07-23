@@ -61,7 +61,7 @@ impl GrepPatterns {
         Ok(GrepPatterns { patterns })
     }
 
-    pub fn find_match(&self, line: &str) -> Option<Vec<GrepMatch>> {
+    pub fn find_match(&self, line: &str) -> Vec<GrepMatch> {
         let mut matches = Vec::new();
 
         for (index, regex) in self.patterns.iter().enumerate() {
@@ -88,12 +88,8 @@ impl GrepPatterns {
                 }
             }
         }
-        if !matches.is_empty() {
-            matches.sort_by(|a, b| a.start.cmp(&b.start));
-            Some(matches)
-        } else {
-            None
-        }
+        matches.sort_by(|a: &GrepMatch, b: &GrepMatch| a.start.cmp(&b.start));
+        matches
     }
 
     fn quote_regex(text: &str) -> String {
@@ -149,66 +145,56 @@ impl<'caller> GrepInFile<'caller> {
         let mut required_after = 0;
 
         for line_result in reader.lines() {
-            match line_result {
-                Err(e) => {
-                    return Err(anyhow!(
-                        "Error reading {} - {}",
-                        self.file_path.display(),
-                        e
-                    ));
-                }
-                Ok(line) => {
-                    self.line_number += 1;
+            let line = line_result
+                .map_err(|e| anyhow!("Error reading {} - {}", self.file_path.display(), e))?;
+            self.line_number += 1;
 
-                    match self.patterns.find_match(&line) {
-                        Some(vec_m) => {
-                            if self.opt.debug {
-                                println!("find_match: {:?}", vec_m);
-                            }
-
-                            let mut line_number = self.line_number - self.before_lines.len();
-
-                            while let Some(line) = self.before_lines.pop_front() {
-                                self.print_match_line(line_number, "-", &line);
-                                line_number += 1;
-                            }
-                            let mut coloured_line = String::new();
-                            let mut last_end = 0;
-
-                            for m in &vec_m {
-                                let mut m_start = m.start;
-                                // deal with overlap
-                                if m_start < last_end {
-                                    m_start = last_end;
-                                }
-                                let colour_index = m.pattern_index % GrepInFile::COLOUR_MATCH.len();
-
-                                coloured_line.push_str(&line[last_end..m_start]);
-                                coloured_line.push_str(GrepInFile::COLOUR_MATCH[colour_index]);
-                                last_end = m.end;
-                                coloured_line.push_str(&line[m_start..last_end]);
-                                coloured_line.push_str(GrepInFile::COLOUR_END);
-                            }
-                            coloured_line.push_str(&line[last_end..line.len()]);
-
-                            self.print_match_line(self.line_number, ":", &coloured_line);
-
-                            required_after = self.num_after;
-                        }
-                        None => {
-                            if self.num_before > 0 {
-                                self.before_lines.push_back(line.clone());
-                                if self.before_lines.len() > self.num_before {
-                                    self.before_lines.pop_front();
-                                }
-                            }
-                            if required_after > 0 {
-                                self.print_match_line(self.line_number, "+", &line);
-                                required_after -= 1;
-                            }
-                        }
+            let vec_m = self.patterns.find_match(&line);
+            if vec_m.is_empty() {
+                // No matches
+                if self.num_before > 0 {
+                    self.before_lines.push_back(line.clone());
+                    if self.before_lines.len() > self.num_before {
+                        self.before_lines.pop_front();
                     }
                 }
+                if required_after > 0 {
+                    self.print_match_line(self.line_number, "+", &line);
+                    required_after -= 1;
+                }
+            } else {
+                if self.opt.debug {
+                    println!("find_match: {:?}", vec_m);
+                }
+
+                let mut line_number = self.line_number - self.before_lines.len();
+
+                while let Some(line) = self.before_lines.pop_front() {
+                    self.print_match_line(line_number, "-", &line);
+                    line_number += 1;
+                }
+                let mut coloured_line = String::new();
+                let mut last_end = 0;
+
+                for m in &vec_m {
+                    let mut m_start = m.start;
+                    // deal with overlap
+                    if m_start < last_end {
+                        m_start = last_end;
+                    }
+                    let colour_index = m.pattern_index % GrepInFile::COLOUR_MATCH.len();
+
+                    coloured_line.push_str(&line[last_end..m_start]);
+                    coloured_line.push_str(GrepInFile::COLOUR_MATCH[colour_index]);
+                    last_end = m.end;
+                    coloured_line.push_str(&line[m_start..last_end]);
+                    coloured_line.push_str(GrepInFile::COLOUR_END);
+                }
+                coloured_line.push_str(&line[last_end..line.len()]);
+
+                self.print_match_line(self.line_number, ":", &coloured_line);
+
+                required_after = self.num_after;
             }
         }
 

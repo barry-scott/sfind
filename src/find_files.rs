@@ -29,6 +29,18 @@ impl PathToScan {
     }
 }
 
+macro_rules! continue_on_err {
+    ($val:expr, $msg:literal) => {
+        match $val {
+            Ok(v) => v,
+            Err(e) => {
+                println!($msg, e);
+                continue;
+            }
+        }
+    };
+}
+
 impl<'caller> Iterator for FindFiles<'caller> {
     type Item = PathBuf;
 
@@ -41,36 +53,23 @@ impl<'caller> Iterator for FindFiles<'caller> {
                     self.cur_dir_entry = None;
                     continue;
                 }
-                Some(entry) => match entry {
-                    // one more file or folder
-                    Ok(entry) => {
-                        let m = match entry.metadata() {
-                            Err(e) => {
-                                println!("error read_dir metadata {}", e);
-                                continue;
-                            }
-                            Ok(m) => m,
-                        };
+                Some(entry) => {
+                    let entry = continue_on_err!(entry, "error read_dir next 2 {}");
+                    let m = continue_on_err!(entry.metadata(), "error read_dir metadata {}");
 
-                        // add this dir to the list of folders to be scanned
-                        if m.is_dir() {
-                            // only go deeper if allowed.
-                            if self.go_deeper() {
-                                self.push_folder(PathToScan::new(entry.path(), self.cur_depth + 1));
-                            }
-                            continue;
-                        };
-
-                        if self.return_file(&entry) {
-                            break Some(entry.path());
+                    // add this dir to the list of folders to be scanned
+                    if m.is_dir() {
+                        // only go deeper if allowed.
+                        if self.go_deeper() {
+                            self.push_folder(PathToScan::new(entry.path(), self.cur_depth + 1));
                         }
-                    }
-                    // problem
-                    Err(e) => {
-                        println!("error read_dir next 2 {}", e);
                         continue;
+                    };
+
+                    if self.return_file(&entry) {
+                        break Some(entry.path());
                     }
-                },
+                }
             }
         }
     }

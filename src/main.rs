@@ -1,5 +1,5 @@
-use std::process::ExitCode;
 use std::env;
+use std::process::ExitCode;
 
 use sfind;
 

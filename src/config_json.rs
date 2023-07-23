@@ -1,16 +1,16 @@
+use anyhow::{anyhow, Result};
+use cfg_if;
 use serde;
 use serde_json;
-use std::path::PathBuf;
 use std::fs;
 use std::fs::File;
 use std::io::prelude::*;
-use anyhow::{Result, anyhow};
-use cfg_if;
+use std::path::PathBuf;
 
 #[derive(serde::Deserialize, Debug)]
 pub struct ConfigJson {
-    pub folders_to_prune:   Vec<String>,
-    pub files_to_prune:     Vec<String>,
+    pub folders_to_prune: Vec<String>,
+    pub files_to_prune: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -32,8 +32,14 @@ impl AppConfig {
         let mut config_data = String::new();
         if config_path.exists() {
             match fs::read_to_string(&config_path) {
-                Ok(data) => { config_data.push_str(&data) },
-                Err(e) => { return Err(anyhow!("Error reading {} - {}", &config_path.display(), e.to_string())) }
+                Ok(data) => config_data.push_str(&data),
+                Err(e) => {
+                    return Err(anyhow!(
+                        "Error reading {} - {}",
+                        &config_path.display(),
+                        e.to_string()
+                    ))
+                }
             };
         } else {
             config_data.push_str(DEFAULT_CONFIG_JSON);
@@ -43,8 +49,14 @@ impl AppConfig {
             app_name: app_name.to_string(),
             config: match serde_json::from_str(&config_data) {
                 Ok(config) => config,
-                Err(e) => { return Err(anyhow!("Error parsing config {} - {}", &config_path.display(), e.to_string())) }
-            }
+                Err(e) => {
+                    return Err(anyhow!(
+                        "Error parsing config {} - {}",
+                        &config_path.display(),
+                        e.to_string()
+                    ))
+                }
+            },
         };
         Ok(app_config)
     }
@@ -52,7 +64,6 @@ impl AppConfig {
     pub fn config_file_path(&self) -> Result<PathBuf> {
         Ok(config_file_path(&self.app_name)?)
     }
-
 
     pub fn save_default_config(&self) -> Result<()> {
         let config_path = self.config_file_path()?;
@@ -66,7 +77,6 @@ impl AppConfig {
         Ok(())
     }
 }
-
 
 cfg_if::cfg_if! {
     if #[cfg(target_os = "macos")] {

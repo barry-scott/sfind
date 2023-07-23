@@ -1,38 +1,38 @@
-use std::fs;
 use std::collections::VecDeque;
+use std::fs;
 use std::path::PathBuf;
 
-use regex::{Regex,RegexBuilder};
+use regex::{Regex, RegexBuilder};
 
-pub use crate::command_options::CommandOptions as CommandOptions;
-pub use crate::config_json::ConfigJson as ConfigJson;
+pub use crate::command_options::CommandOptions;
+pub use crate::config_json::ConfigJson;
 
 #[derive(Debug)]
 struct PathToScan {
-    pub path:           PathBuf,
-    pub depth:          usize,
+    pub path: PathBuf,
+    pub depth: usize,
 }
 
 pub struct FindFiles<'caller> {
-    folders:            VecDeque<PathToScan>,
-    cur_dir_entry:      Option<fs::ReadDir>,
-    cur_depth:          usize,
-    opt:                &'caller CommandOptions,
-    folders_to_prune:   Option<Regex>,
-    files_to_prune:     Option<Regex>,
-    files_to_find:      Option<Regex>,
+    folders: VecDeque<PathToScan>,
+    cur_dir_entry: Option<fs::ReadDir>,
+    cur_depth: usize,
+    opt: &'caller CommandOptions,
+    folders_to_prune: Option<Regex>,
+    files_to_prune: Option<Regex>,
+    files_to_find: Option<Regex>,
 }
 
 impl PathToScan {
     pub fn new(path: PathBuf, depth: usize) -> PathToScan {
         PathToScan {
-            path:   path,
-            depth:  depth,
+            path: path,
+            depth: depth,
         }
     }
 }
 
-impl <'caller> Iterator for FindFiles<'caller> {
+impl<'caller> Iterator for FindFiles<'caller> {
     type Item = PathBuf;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -58,7 +58,11 @@ impl <'caller> Iterator for FindFiles<'caller> {
 
                             match fs::read_dir(path_to_scan.path.clone()) {
                                 Err(e) => {
-                                    println!("error read_dir {} - {}", path_to_scan.path.display(), e);
+                                    println!(
+                                        "error read_dir {} - {}",
+                                        path_to_scan.path.display(),
+                                        e
+                                    );
                                     continue;
                                 }
                                 Ok(entry) => {
@@ -69,7 +73,7 @@ impl <'caller> Iterator for FindFiles<'caller> {
                             }
                         }
                     }
-                },
+                }
 
                 // use the cur_dir_entry that is active
                 Some(dir_entry) => {
@@ -79,7 +83,7 @@ impl <'caller> Iterator for FindFiles<'caller> {
                             // set to None and try again on the next folder
                             self.cur_dir_entry = None;
                             continue;
-                        },
+                        }
                         Some(entry) => match entry {
                             // one more file or folder
                             Ok(entry) => {
@@ -88,22 +92,21 @@ impl <'caller> Iterator for FindFiles<'caller> {
                                         println!("error read_dir metadata {}", e);
                                         continue;
                                     }
-                                    Ok(m) => m
+                                    Ok(m) => m,
                                 };
 
                                 // add this dir to the list of folders to be scanned
                                 if m.is_dir() {
                                     // only go deeper if allowed.
                                     if match self.opt.find_depth {
-                                        Some(depth) => {
-                                            self.cur_depth < depth
-                                        }
+                                        Some(depth) => self.cur_depth < depth,
                                         // no limit on depth
-                                        None => {
-                                            true
-                                        }
+                                        None => true,
                                     } {
-                                        self.folders.push_back(PathToScan::new(entry.path(), self.cur_depth+1));
+                                        self.folders.push_back(PathToScan::new(
+                                            entry.path(),
+                                            self.cur_depth + 1,
+                                        ));
                                     }
                                     continue;
                                 };
@@ -119,8 +122,8 @@ impl <'caller> Iterator for FindFiles<'caller> {
                                             println!("include_file {:?}", entry.path());
                                         }
 
-                                        return Some(entry.path())
-                                    },
+                                        return Some(entry.path());
+                                    }
                                     None => {
                                         // exclude files that are config to be pruned
                                         if self.exclude_file(&entry) {
@@ -131,18 +134,21 @@ impl <'caller> Iterator for FindFiles<'caller> {
                                         }
 
                                         if self.opt.debug {
-                                            println!("file not included or excluded {:?}", entry.path());
+                                            println!(
+                                                "file not included or excluded {:?}",
+                                                entry.path()
+                                            );
                                         }
-                                        return Some(entry.path())
+                                        return Some(entry.path());
                                     }
                                 }
-                            },
+                            }
                             // problem
                             Err(e) => {
                                 println!("error read_dir next 2 {}", e);
                                 continue;
                             }
-                        }
+                        },
                     }
                 }
             }
@@ -150,19 +156,21 @@ impl <'caller> Iterator for FindFiles<'caller> {
     }
 }
 
-impl <'caller> FindFiles<'caller> {
+impl<'caller> FindFiles<'caller> {
     pub fn new(opt: &'caller CommandOptions, cfg: &'caller ConfigJson) -> FindFiles<'caller> {
         let mut finder = FindFiles {
-            folders:            VecDeque::new(),
-            cur_dir_entry:      None,
-            cur_depth:          0,
-            opt:                opt,
-            folders_to_prune:   FindFiles::match_filenames_regex(&cfg.folders_to_prune, true),
-            files_to_prune:     FindFiles::match_filenames_regex(&cfg.files_to_prune, true),
-            files_to_find:      FindFiles::match_filenames_regex(&opt.files, opt.find_iname),
+            folders: VecDeque::new(),
+            cur_dir_entry: None,
+            cur_depth: 0,
+            opt: opt,
+            folders_to_prune: FindFiles::match_filenames_regex(&cfg.folders_to_prune, true),
+            files_to_prune: FindFiles::match_filenames_regex(&cfg.files_to_prune, true),
+            files_to_find: FindFiles::match_filenames_regex(&opt.files, opt.find_iname),
         };
         for path in &opt.folders {
-            finder.folders.push_back(PathToScan::new(path.to_path_buf(), 1));
+            finder
+                .folders
+                .push_back(PathToScan::new(path.to_path_buf(), 1));
         }
 
         finder
@@ -187,33 +195,27 @@ impl <'caller> FindFiles<'caller> {
                             println!("exclude {} -> {:?}", folder_name, exclude);
                         }
                         exclude
-                    },
+                    }
                     None => {
                         println!("folder_name is not utf-8");
-                        return true
+                        return true;
                     }
                 }
-            },
-            None => {
-                false
             }
+            None => false,
         }
     }
 
     fn match_file(&self, match_regex: &Option<Regex>, entry: &fs::DirEntry) -> bool {
         match &match_regex {
-            Some(regex) => {
-                match entry.file_name().into_string() {
-                    Ok(file_name) => {
-                        regex.is_match(&file_name)
-                    },
-                    Err(_) => {
-                        println!("file_name is not utf-8 {}", entry.path().display());
-                        false
-                    }
+            Some(regex) => match entry.file_name().into_string() {
+                Ok(file_name) => regex.is_match(&file_name),
+                Err(_) => {
+                    println!("file_name is not utf-8 {}", entry.path().display());
+                    false
                 }
             },
-            None => false
+            None => false,
         }
     }
 
@@ -239,7 +241,10 @@ impl <'caller> FindFiles<'caller> {
                 sep = "|";
             }
             prune_pattern.push_str(")$");
-            match RegexBuilder::new(&prune_pattern).case_insensitive(case_insensitive).build() {
+            match RegexBuilder::new(&prune_pattern)
+                .case_insensitive(case_insensitive)
+                .build()
+            {
                 Ok(regex) => Some(regex),
                 Err(e) => {
                     println!("bad pattern {} - {}", prune_pattern, e);
@@ -256,12 +261,11 @@ impl <'caller> FindFiles<'caller> {
             match ch {
                 '*' => regex_pattern.push_str(".*"),
                 '?' => regex_pattern.push_str("."),
-                '.' | '+' | '(' | ')' | '|' | '\\' |
-                '[' | ']' | '{' | '}' | '^' | '$' | '#' => {
+                '.' | '+' | '(' | ')' | '|' | '\\' | '[' | ']' | '{' | '}' | '^' | '$' | '#' => {
                     regex_pattern.push('\\');
                     regex_pattern.push(ch)
                 }
-                _ => regex_pattern.push(ch)
+                _ => regex_pattern.push(ch),
             };
         }
 
@@ -276,8 +280,14 @@ mod tests {
     #[test]
     fn glob_pattern_to_regex_pattern() {
         assert_eq!(FindFiles::glob_pattern_to_regex_pattern("fixed"), "fixed");
-        assert_eq!(FindFiles::glob_pattern_to_regex_pattern("file.type"), "file\\.type");
-        assert_eq!(FindFiles::glob_pattern_to_regex_pattern("*.type"), ".*\\.type");
+        assert_eq!(
+            FindFiles::glob_pattern_to_regex_pattern("file.type"),
+            "file\\.type"
+        );
+        assert_eq!(
+            FindFiles::glob_pattern_to_regex_pattern("*.type"),
+            ".*\\.type"
+        );
     }
 
     #[test]
@@ -297,14 +307,14 @@ mod tests {
 
     #[test]
     fn regex_vec_match() {
-        let glob_patterns = vec!(String::from("*.txt"));
+        let glob_patterns = vec![String::from("*.txt")];
         let regex = FindFiles::match_filenames_regex(&glob_patterns, false).unwrap();
         assert_eq!(regex.as_str(), r#"^(.*\.txt)$"#);
 
         let haystack = String::from("abc.txt");
         assert!(regex.is_match(&haystack));
 
-        let glob_patterns = vec!(String::from("*.txt"), String::from("*.rs"));
+        let glob_patterns = vec![String::from("*.txt"), String::from("*.rs")];
         let regex = FindFiles::match_filenames_regex(&glob_patterns, false).unwrap();
         assert_eq!(regex.as_str(), r#"^(.*\.txt|.*\.rs)$"#);
 
@@ -316,5 +326,4 @@ mod tests {
         let haystack = String::from("abc.toml");
         assert!(!regex.is_match(&haystack));
     }
-
 }

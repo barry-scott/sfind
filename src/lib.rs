@@ -4,13 +4,13 @@ pub mod find_files;
 pub use find_files::FindFiles;
 
 pub mod grep_in_file;
-pub use grep_in_file::{GrepPatterns, GrepInFile};
+pub use grep_in_file::{GrepInFile, GrepPatterns};
 
 pub mod command_options;
-pub use command_options::CommandOptions as CommandOptions;
+pub use command_options::CommandOptions;
 
 pub mod config_json;
-pub use config_json::AppConfig as AppConfig;
+pub use config_json::AppConfig;
 
 pub fn run(opt: CommandOptions, cfg: AppConfig) -> Result<()> {
     if opt.fixed_strings.len() == 0 && opt.regex_patterns.len() == 0 {
@@ -30,8 +30,8 @@ pub fn run(opt: CommandOptions, cfg: AppConfig) -> Result<()> {
             match grep_in_file.search() {
                 Err(e) => {
                     println!("error {}", e);
-                },
-                Ok(_) => { },
+                }
+                Ok(_) => {}
             }
         }
     }

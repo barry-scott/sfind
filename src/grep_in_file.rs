@@ -216,19 +216,12 @@ impl<'caller> GrepInFile<'caller> {
             }
         }
 
-        let mut match_report = String::new();
-        match_report.push_str(GrepInFile::COLOUR_FILE);
-        match_report.push_str(&path);
-        match_report.push_str(GrepInFile::COLOUR_END);
-        match_report.push(':');
-        match_report.push_str(GrepInFile::COLOUR_LINE);
-        match_report.push_str(&line_number);
-        match_report.push_str(GrepInFile::COLOUR_END);
-        match_report.push_str(sep);
-        match_report.push_str(&padding);
-        match_report.push_str(line);
-
-        println!("{}", match_report);
+        println!(
+            "{colour_file}{path}{colour_end}:{colour_line}{line_number}{colour_end}{sep}{padding}{line}",
+            colour_file = GrepInFile::COLOUR_FILE,
+            colour_end = GrepInFile::COLOUR_END,
+            colour_line = GrepInFile::COLOUR_LINE
+        );
     }
 }
 

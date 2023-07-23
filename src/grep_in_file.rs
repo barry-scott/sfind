@@ -62,32 +62,19 @@ impl GrepPatterns {
     }
 
     pub fn find_match(&self, line: &str) -> Vec<GrepMatch> {
-        let mut matches = Vec::new();
+        let mut matches: Vec<_> = self
+            .patterns
+            .iter()
+            .enumerate()
+            .flat_map(|(pattern_index, regex)| {
+                regex.find_iter(line).map(move |m| GrepMatch {
+                    pattern_index,
+                    start: m.start(),
+                    end: m.end(),
+                })
+            })
+            .collect();
 
-        for (index, regex) in self.patterns.iter().enumerate() {
-            // assuming here that is_match is faster then find
-            if matches.is_empty() {
-                if regex.is_match(line) {
-                    // add the first match to the vec.
-                    for m in regex.find_iter(line) {
-                        matches.push(GrepMatch {
-                            pattern_index: index,
-                            start: m.start(),
-                            end: m.end(),
-                        })
-                    }
-                }
-            } else {
-                // look for more matches to add
-                for m in regex.find_iter(line) {
-                    matches.push(GrepMatch {
-                        pattern_index: index,
-                        start: m.start(),
-                        end: m.end(),
-                    })
-                }
-            }
-        }
         matches.sort_by(|a: &GrepMatch, b: &GrepMatch| a.start.cmp(&b.start));
         matches
     }

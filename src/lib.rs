@@ -13,7 +13,7 @@ pub mod config_json;
 pub use config_json::AppConfig;
 
 pub fn run(opt: CommandOptions, cfg: AppConfig) -> Result<()> {
-    if opt.fixed_strings.len() == 0 && opt.regex_patterns.len() == 0 {
+    if opt.fixed_strings.is_empty() && opt.regex_patterns.is_empty() {
         // just print the files that are found
         for path in FindFiles::new(&opt, &cfg.config) {
             println!("{}", path.display());

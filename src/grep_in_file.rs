@@ -35,7 +35,7 @@ impl<'caller> GrepPatterns {
         let mut gp = GrepPatterns { patterns: vec![] };
 
         for fixed in &opt.fixed_strings {
-            match RegexBuilder::new(&GrepPatterns::quote_regex(&fixed))
+            match RegexBuilder::new(&GrepPatterns::quote_regex(fixed))
                 .case_insensitive(opt.grep_ignore_case)
                 .build()
             {
@@ -47,7 +47,7 @@ impl<'caller> GrepPatterns {
         }
 
         for pattern in &opt.regex_patterns {
-            match RegexBuilder::new(&pattern)
+            match RegexBuilder::new(pattern)
                 .case_insensitive(opt.grep_ignore_case)
                 .build()
             {
@@ -66,10 +66,10 @@ impl<'caller> GrepPatterns {
 
         for (index, regex) in self.patterns.iter().enumerate() {
             // assuming here that is_match is faster then find
-            if matches.len() == 0 {
-                if regex.is_match(&line) {
+            if matches.is_empty() {
+                if regex.is_match(line) {
                     // add the first match to the vec.
-                    for m in regex.find_iter(&line) {
+                    for m in regex.find_iter(line) {
                         matches.push(GrepMatch {
                             pattern_index: index,
                             start: m.start(),
@@ -79,7 +79,7 @@ impl<'caller> GrepPatterns {
                 }
             } else {
                 // look for more matches to add
-                for m in regex.find_iter(&line) {
+                for m in regex.find_iter(line) {
                     matches.push(GrepMatch {
                         pattern_index: index,
                         start: m.start(),
@@ -88,7 +88,7 @@ impl<'caller> GrepPatterns {
                 }
             }
         }
-        if matches.len() > 0 {
+        if !matches.is_empty() {
             matches.sort_by(|a, b| a.start.cmp(&b.start));
             Some(matches)
         } else {
@@ -120,23 +120,17 @@ impl<'caller> GrepInFile<'caller> {
         file_path: &'caller PathBuf,
         patterns: &'caller GrepPatterns,
     ) -> GrepInFile<'caller> {
-        let gif = GrepInFile {
-            opt: opt,
-            patterns: patterns,
-            file_path: file_path,
-            num_before: match opt.grep_lines_before {
-                Some(n) => n,
-                None => 0,
-            },
+        
+
+        GrepInFile {
+            opt,
+            patterns,
+            file_path,
+            num_before: opt.grep_lines_before.unwrap_or(0),
             before_lines: VecDeque::new(),
             line_number: 0,
-            num_after: match opt.grep_lines_after {
-                Some(n) => n,
-                None => 0,
-            },
-        };
-
-        gif
+            num_after: opt.grep_lines_after.unwrap_or(0),
+        }
     }
 
     const COLOUR_FILE: &str = "\x1b[35m"; // purple
@@ -244,9 +238,9 @@ impl<'caller> GrepInFile<'caller> {
         let mut padding = String::new();
         for _ in 0..(prefix_len_max + padding_required - prefix_len_min) {
             if self.opt.debug {
-                padding.push_str("·")
+                padding.push('·')
             } else {
-                padding.push_str(" ")
+                padding.push(' ')
             }
         }
 
@@ -254,7 +248,7 @@ impl<'caller> GrepInFile<'caller> {
         match_report.push_str(GrepInFile::COLOUR_FILE);
         match_report.push_str(&path);
         match_report.push_str(GrepInFile::COLOUR_END);
-        match_report.push_str(":");
+        match_report.push(':');
         match_report.push_str(GrepInFile::COLOUR_LINE);
         match_report.push_str(&line_number);
         match_report.push_str(GrepInFile::COLOUR_END);

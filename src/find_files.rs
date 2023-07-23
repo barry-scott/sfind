@@ -26,8 +26,8 @@ pub struct FindFiles<'caller> {
 impl PathToScan {
     pub fn new(path: PathBuf, depth: usize) -> PathToScan {
         PathToScan {
-            path: path,
-            depth: depth,
+            path,
+            depth,
         }
     }
 }
@@ -162,7 +162,7 @@ impl<'caller> FindFiles<'caller> {
             folders: VecDeque::new(),
             cur_dir_entry: None,
             cur_depth: 0,
-            opt: opt,
+            opt,
             folders_to_prune: FindFiles::match_filenames_regex(&cfg.folders_to_prune, true),
             files_to_prune: FindFiles::match_filenames_regex(&cfg.files_to_prune, true),
             files_to_find: FindFiles::match_filenames_regex(&opt.files, opt.find_iname),
@@ -190,7 +190,7 @@ impl<'caller> FindFiles<'caller> {
                 };
                 match folder_name.to_str() {
                     Some(folder_name) => {
-                        let exclude = regex.is_match(&folder_name);
+                        let exclude = regex.is_match(folder_name);
                         if self.opt.debug {
                             println!("exclude {} -> {:?}", folder_name, exclude);
                         }
@@ -198,7 +198,7 @@ impl<'caller> FindFiles<'caller> {
                     }
                     None => {
                         println!("folder_name is not utf-8");
-                        return true;
+                        true
                     }
                 }
             }
@@ -228,7 +228,7 @@ impl<'caller> FindFiles<'caller> {
     }
 
     fn match_filenames_regex(all_patterns: &Vec<String>, case_insensitive: bool) -> Option<Regex> {
-        if all_patterns.len() == 0 {
+        if all_patterns.is_empty() {
             None
         } else {
             let mut prune_pattern = String::new();
@@ -237,7 +237,7 @@ impl<'caller> FindFiles<'caller> {
 
             for pattern in all_patterns {
                 prune_pattern.push_str(sep);
-                prune_pattern.push_str(&FindFiles::glob_pattern_to_regex_pattern(&pattern));
+                prune_pattern.push_str(&FindFiles::glob_pattern_to_regex_pattern(pattern));
                 sep = "|";
             }
             prune_pattern.push_str(")$");
@@ -260,7 +260,7 @@ impl<'caller> FindFiles<'caller> {
         for ch in glob_pattern.chars() {
             match ch {
                 '*' => regex_pattern.push_str(".*"),
-                '?' => regex_pattern.push_str("."),
+                '?' => regex_pattern.push('.'),
                 '.' | '+' | '(' | ')' | '|' | '\\' | '[' | ']' | '{' | '}' | '^' | '$' | '#' => {
                     regex_pattern.push('\\');
                     regex_pattern.push(ch)

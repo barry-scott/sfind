@@ -27,7 +27,7 @@ static DEFAULT_CONFIG_JSON: &str = r#"{
 
 impl AppConfig {
     pub fn new(app_name: &str) -> Result<AppConfig> {
-        let config_path = config_file_path(&app_name)?;
+        let config_path = config_file_path(app_name)?;
 
         let mut config_data = String::new();
         if config_path.exists() {
@@ -62,7 +62,7 @@ impl AppConfig {
     }
 
     pub fn config_file_path(&self) -> Result<PathBuf> {
-        Ok(config_file_path(&self.app_name)?)
+        config_file_path(&self.app_name)
     }
 
     pub fn save_default_config(&self) -> Result<()> {
@@ -99,9 +99,8 @@ cfg_if::cfg_if! {
         fn config_file_path(app_name: &str) -> Result<PathBuf> {
             let xdg_dirs = xdg::BaseDirectories::new()?;
 
-            Ok(PathBuf::from(
-                xdg_dirs.place_config_file(
-                    format!("{}.json", &app_name))?))
+            Ok(xdg_dirs.place_config_file(
+                    format!("{}.json", &app_name))?)
         }
     }
 }

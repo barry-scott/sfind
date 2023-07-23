@@ -71,7 +71,7 @@ impl CommandOptions {
 
         let cli = Cli::try_parse()?;
         let mut opt = CommandOptions {
-            progname: progname,
+            progname,
             debug: cli.debug,
             save_default_config: cli.save_default_config,
             find_iname: !cli.case_sensitive_filenames,
@@ -100,7 +100,7 @@ impl CommandOptions {
             }
         }
 
-        if opt.folders.len() == 0 {
+        if opt.folders.is_empty() {
             opt.folders.push(PathBuf::from("."));
         }
 

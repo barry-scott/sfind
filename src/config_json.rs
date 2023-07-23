@@ -29,34 +29,27 @@ impl AppConfig {
     pub fn new(app_name: &str) -> Result<AppConfig> {
         let config_path = config_file_path(app_name)?;
 
-        let mut config_data = String::new();
-        if config_path.exists() {
-            match fs::read_to_string(&config_path) {
-                Ok(data) => config_data.push_str(&data),
-                Err(e) => {
-                    return Err(anyhow!(
-                        "Error reading {} - {}",
-                        &config_path.display(),
-                        e.to_string()
-                    ))
-                }
-            };
+        let config_data = if config_path.exists() {
+            fs::read_to_string(&config_path).map_err(|e| {
+                anyhow!(
+                    "Error reading {} - {}",
+                    &config_path.display(),
+                    e.to_string()
+                )
+            })?
         } else {
-            config_data.push_str(DEFAULT_CONFIG_JSON);
+            DEFAULT_CONFIG_JSON.to_string()
         };
 
         let app_config = AppConfig {
             app_name: app_name.to_string(),
-            config: match serde_json::from_str(&config_data) {
-                Ok(config) => config,
-                Err(e) => {
-                    return Err(anyhow!(
-                        "Error parsing config {} - {}",
-                        &config_path.display(),
-                        e.to_string()
-                    ))
-                }
-            },
+            config: serde_json::from_str(&config_data).map_err(|e| {
+                anyhow!(
+                    "Error parsing config {} - {}",
+                    &config_path.display(),
+                    e.to_string()
+                )
+            })?,
         };
         Ok(app_config)
     }

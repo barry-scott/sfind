@@ -1,5 +1,5 @@
 use std::collections::VecDeque;
-use std::fs;
+use std::fs::{self, DirEntry};
 use std::path::{Path, PathBuf};
 
 use regex::{Regex, RegexBuilder};
@@ -34,120 +34,112 @@ impl<'caller> Iterator for FindFiles<'caller> {
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            match &mut self.cur_dir_entry {
-                // There is no cur_dir_entry in use
-                // set to read_dir() of the next folder to scan
+            match self.cur_dir_entry()?.next() {
+                // no more files in this dir
                 None => {
-                    match self.folders.pop_front() {
-                        // no more folders to scan - then end!
-                        None => {
-                            return None;
-                        }
-
-                        // scan this folder?
-                        Some(path_to_scan) => {
-                            if self.exclude_folder(&path_to_scan.path) {
-                                if self.opt.debug {
-                                    println!("exclude folder {:?}", path_to_scan);
-                                }
-                                continue;
-                            }
-
-                            match fs::read_dir(path_to_scan.path.clone()) {
-                                Err(e) => {
-                                    println!(
-                                        "error read_dir {} - {}",
-                                        path_to_scan.path.display(),
-                                        e
-                                    );
-                                    continue;
-                                }
-                                Ok(entry) => {
-                                    self.cur_dir_entry = Some(entry);
-                                    self.cur_depth = path_to_scan.depth;
-                                    continue;
-                                }
-                            }
-                        }
-                    }
+                    // set to None and try again on the next folder
+                    self.cur_dir_entry = None;
+                    continue;
                 }
-
-                // use the cur_dir_entry that is active
-                Some(dir_entry) => {
-                    match dir_entry.next() {
-                        // no more files in this dir
-                        None => {
-                            // set to None and try again on the next folder
-                            self.cur_dir_entry = None;
-                            continue;
-                        }
-                        Some(entry) => match entry {
-                            // one more file or folder
-                            Ok(entry) => {
-                                let m = match entry.metadata() {
-                                    Err(e) => {
-                                        println!("error read_dir metadata {}", e);
-                                        continue;
-                                    }
-                                    Ok(m) => m,
-                                };
-
-                                // add this dir to the list of folders to be scanned
-                                if m.is_dir() {
-                                    // only go deeper if allowed.
-                                    if match self.opt.find_depth {
-                                        Some(depth) => self.cur_depth < depth,
-                                        // no limit on depth
-                                        None => true,
-                                    } {
-                                        self.folders.push_back(PathToScan::new(
-                                            entry.path(),
-                                            self.cur_depth + 1,
-                                        ));
-                                    }
-                                    continue;
-                                };
-
-                                // return all files that where asked for on the command line
-                                match self.files_to_find {
-                                    Some(_) => {
-                                        if !self.include_file(&entry) {
-                                            continue;
-                                        }
-
-                                        if self.opt.debug {
-                                            println!("include_file {:?}", entry.path());
-                                        }
-
-                                        return Some(entry.path());
-                                    }
-                                    None => {
-                                        // exclude files that are config to be pruned
-                                        if self.exclude_file(&entry) {
-                                            if self.opt.debug {
-                                                println!("exclude_file {:?}", entry.path());
-                                            }
-                                            continue;
-                                        }
-
-                                        if self.opt.debug {
-                                            println!(
-                                                "file not included or excluded {:?}",
-                                                entry.path()
-                                            );
-                                        }
-                                        return Some(entry.path());
-                                    }
-                                }
-                            }
-                            // problem
+                Some(entry) => match entry {
+                    // one more file or folder
+                    Ok(entry) => {
+                        let m = match entry.metadata() {
                             Err(e) => {
-                                println!("error read_dir next 2 {}", e);
+                                println!("error read_dir metadata {}", e);
                                 continue;
                             }
-                        },
+                            Ok(m) => m,
+                        };
+
+                        // add this dir to the list of folders to be scanned
+                        if m.is_dir() {
+                            // only go deeper if allowed.
+                            if self.go_deeper() {
+                                self.push_folder(PathToScan::new(entry.path(), self.cur_depth + 1));
+                            }
+                            continue;
+                        };
+
+                        if self.return_file(&entry) {
+                            break Some(entry.path());
+                        }
                     }
+                    // problem
+                    Err(e) => {
+                        println!("error read_dir next 2 {}", e);
+                        continue;
+                    }
+                },
+            }
+        }
+    }
+}
+
+// Utility functions for the iterator implementation
+impl<'caller> FindFiles<'caller> {
+    fn cur_dir_entry(&mut self) -> Option<&mut std::fs::ReadDir> {
+        // There is no cur_dir_entry in use
+        // set to read_dir() of the next folder to scan
+        while self.cur_dir_entry.is_none() {
+            // In a function returning `Option`, `?` returns if we get a `None`.
+            let path_to_scan = self.folders.pop_front()?;
+
+            match fs::read_dir(path_to_scan.path.clone()) {
+                Err(e) => {
+                    println!("error read_dir {} - {}", path_to_scan.path.display(), e);
+                    continue;
                 }
+                Ok(entry) => {
+                    self.cur_dir_entry = Some(entry);
+                    self.cur_depth = path_to_scan.depth;
+                    break;
+                }
+            }
+        }
+
+        self.cur_dir_entry.as_mut()
+    }
+
+    fn push_folder(&mut self, path_to_scan: PathToScan) {
+        if self.exclude_folder(&path_to_scan.path) {
+            if self.opt.debug {
+                println!("exclude folder {:?}", path_to_scan);
+            }
+        } else {
+            self.folders.push_back(path_to_scan)
+        }
+    }
+
+    fn go_deeper(&self) -> bool {
+        self.opt
+            .find_depth
+            .map(|depth| self.cur_depth < depth)
+            .unwrap_or(true)
+    }
+
+    fn return_file(&self, entry: &DirEntry) -> bool {
+        if self.files_to_find.is_some() {
+            if !self.include_file(entry) {
+                false
+            } else {
+                if self.opt.debug {
+                    println!("include_file {:?}", entry.path());
+                }
+                true
+            }
+        } else {
+            // exclude files that are config to be pruned
+            if self.exclude_file(entry) {
+                if self.opt.debug {
+                    println!("exclude_file {:?}", entry.path());
+                }
+                false
+            } else {
+                if self.opt.debug {
+                    println!("file not included or excluded {:?}", entry.path());
+                }
+                true
             }
         }
     }
@@ -203,28 +195,28 @@ impl<'caller> FindFiles<'caller> {
         }
     }
 
-    fn match_file(&self, match_regex: &Option<Regex>, entry: &fs::DirEntry) -> bool {
-        match &match_regex {
-            Some(regex) => match entry.file_name().into_string() {
-                Ok(file_name) => regex.is_match(&file_name),
-                Err(_) => {
+    fn match_file(&self, match_regex: Option<&Regex>, entry: &fs::DirEntry) -> bool {
+        match_regex
+            .map(|regex| {
+                if let Ok(file_name) = entry.file_name().into_string() {
+                    regex.is_match(&file_name)
+                } else {
                     println!("file_name is not utf-8 {}", entry.path().display());
                     false
                 }
-            },
-            None => false,
-        }
+            })
+            .unwrap_or(false)
     }
 
     fn include_file(&self, entry: &fs::DirEntry) -> bool {
-        self.match_file(&self.files_to_find, entry)
+        self.match_file(self.files_to_find.as_ref(), entry)
     }
 
     fn exclude_file(&self, entry: &fs::DirEntry) -> bool {
-        self.match_file(&self.files_to_prune, entry)
+        self.match_file(self.files_to_prune.as_ref(), entry)
     }
 
-    fn match_filenames_regex(all_patterns: &Vec<String>, case_insensitive: bool) -> Option<Regex> {
+    fn match_filenames_regex(all_patterns: &[String], case_insensitive: bool) -> Option<Regex> {
         if all_patterns.is_empty() {
             None
         } else {

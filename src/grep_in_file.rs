@@ -46,19 +46,19 @@ fn pattern_to_refex(pattern: &str, case_insensitive: bool) -> Result<Regex> {
 
 impl<'caller> GrepPatterns {
     pub fn new(opt: &CommandOptions) -> Result<GrepPatterns> {
-        let mut gp = GrepPatterns { patterns: vec![] };
+        let fixed = opt
+            .fixed_strings
+            .iter()
+            .map(|fixed| fixed_to_regex(fixed, opt.grep_ignore_case));
+        let regex = opt
+            .regex_patterns
+            .iter()
+            .map(|pattern| pattern_to_refex(pattern, opt.grep_ignore_case));
 
-        for fixed in &opt.fixed_strings {
-            gp.patterns
-                .push(fixed_to_regex(fixed, opt.grep_ignore_case)?);
-        }
+        let patterns: Result<Vec<_>> = fixed.chain(regex).collect();
+        let patterns = patterns?;
 
-        for pattern in &opt.regex_patterns {
-            gp.patterns
-                .push(pattern_to_refex(pattern, opt.grep_ignore_case)?)
-        }
-
-        Ok(gp)
+        Ok(GrepPatterns { patterns })
     }
 
     pub fn find_match(&'caller self, line: &'caller str) -> Option<Vec<GrepMatch>> {

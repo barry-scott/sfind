@@ -5,6 +5,7 @@ use std::fs;
 use std::fs::File;
 use std::io::prelude::*;
 use anyhow::{Result, anyhow};
+use cfg_if;
 
 #[derive(serde::Deserialize, Debug)]
 pub struct ConfigJson {
@@ -67,24 +68,30 @@ impl AppConfig {
 }
 
 
-#[cfg(target_os = "macos")]
-use std::env;
+cfg_if::cfg_if! {
+    if #[cfg(target_os = "macos")] {
+        use std::env;
 
-#[cfg(target_os = "macos")]
-fn config_file_path(app_name: &str) -> Result<PathBuf> {
-    let home_dir = env::var("HOME")?;
-    Ok(PathBuf::from(
-        format!("{}/Library/Preferences/{}.json", home_dir, &app_name)))
-}
+        fn config_file_path(app_name: &str) -> Result<PathBuf> {
+            let home_dir = env::var("HOME")?;
+            Ok(PathBuf::from(
+                format!("{}/Library/Preferences/{}.json", home_dir, &app_name)))
+        }
 
-#[cfg(target_os = "linux")]
-use xdg;
+    } else if #[cfg(target_os = "windows")] {
+        fn config_file_path(app_name: &str) -> Result<PathBuf> {
+            Err(anyhow!("No windows support yet!"))
+        }
 
-#[cfg(target_os = "linux")]
-fn config_file_path(app_name: &str) -> Result<PathBuf> {
-    let xdg_dirs = xdg::BaseDirectories::new()?;
+    } else { // assume not mac and not windows can use xdg standard
+        use xdg;
 
-    Ok(PathBuf::from(
-        xdg_dirs.place_config_file(
-            format!("{}.json", &app_name))?))
+        fn config_file_path(app_name: &str) -> Result<PathBuf> {
+            let xdg_dirs = xdg::BaseDirectories::new()?;
+
+            Ok(PathBuf::from(
+                xdg_dirs.place_config_file(
+                    format!("{}.json", &app_name))?))
+        }
+    }
 }

@@ -5,7 +5,7 @@ use std::fs;
 use std::io::{BufRead, BufReader};
 
 use anyhow::{Result, anyhow};
-use regex::{Regex, RegexBuilder, Match};
+use regex::{Regex, RegexBuilder};
 
 pub use crate::command_options::CommandOptions as CommandOptions;
 
@@ -13,7 +13,15 @@ pub struct GrepPatterns {
     pub patterns:        Vec<Regex>,
 }
 
+#[derive(Debug)]
+pub struct GrepMatch {
+    pattern_index:  usize,
+    start:          usize,
+    end:            usize,
+}
+
 pub struct GrepInFile<'caller> {
+    opt:                &'caller CommandOptions,
     patterns:           &'caller GrepPatterns,
     file_path:          &'caller PathBuf,
     num_before:         usize,
@@ -53,15 +61,31 @@ impl <'caller> GrepPatterns {
         Ok(gp)
     }
 
-    pub fn find_match(&'caller self, line: &'caller str) -> Option<Match> {
-        for regex in self.patterns.iter() {
+    pub fn find_match(&'caller self, line: &'caller str) -> Option<Vec<GrepMatch>> {
+        let mut matches = Vec::new();
+
+        for (index, regex) in self.patterns.iter().enumerate() {
             // assuming here that is_match is faster then find
-            if regex.is_match(&line) {
-                return regex.find(&line);
+            if matches.len() == 0 {
+                if regex.is_match(&line) {
+                    // add the first match to the vec.
+                    for m in regex.find_iter(&line) {
+                        matches.push(GrepMatch { pattern_index: index, start: m.start(), end: m.end() })
+                    }
+                }
+            } else {
+                // look for more matches to add
+                for m in regex.find_iter(&line) {
+                    matches.push(GrepMatch { pattern_index: index, start: m.start(), end: m.end() })
+                }
             }
         }
-
-        None
+        if matches.len() > 0 {
+            matches.sort_by(|a, b| a.start.cmp(&b.start));
+            Some(matches)
+        } else {
+            None
+        }
     }
 
     fn quote_regex(text: &str) -> String {
@@ -87,6 +111,7 @@ impl <'caller> GrepPatterns {
 impl <'caller> GrepInFile<'caller> {
     pub fn new(opt: &'caller CommandOptions, file_path: &'caller PathBuf, patterns: &'caller GrepPatterns) -> GrepInFile<'caller> {
         let gif = GrepInFile {
+            opt:                opt,
             patterns:           patterns,
             file_path:          file_path,
             num_before:         match opt.grep_lines_before { Some(n) => n, None => 0 },
@@ -98,10 +123,16 @@ impl <'caller> GrepInFile<'caller> {
         gif
     }
 
-    const COLOUR_FILE: &str = "\x1b[35m";
-    const COLOUR_LINE: &str = "\x1b[32m";
-    const COLOUR_MATCH: &str = "\x1b[1;31m";
-    const COLOUR_END: &str = "\x1b[m";
+    const COLOUR_FILE: &str = "\x1b[35m";   // purple
+    const COLOUR_LINE: &str = "\x1b[32m";   // green
+    const COLOUR_MATCH: &'static [&'static str] = &[
+        "\x1b[1;31m",   // light red
+        "\x1b[33m",     // yellow
+        "\x1b[1;34m",   // light blue
+        "\x1b[32m",     // green
+        "\x1b[35m",     // purple
+        ];
+    const COLOUR_END: &str = "\x1b[m";      // no colour
 
     pub fn search(&mut self) -> Result<()> {
         let file = fs::File::open(self.file_path)?;
@@ -118,24 +149,43 @@ impl <'caller> GrepInFile<'caller> {
                     self.line_number += 1;
 
                     match self.patterns.find_match(&line) {
-                        Some(m) => {
+                        Some(vec_m) => {
+                            if self.opt.debug {
+                                println!("find_match: {:?}", vec_m);
+                            }
+
                             let mut line_number = self.line_number - self.before_lines.len();
 
                             loop {
                                 match self.before_lines.pop_front() {
                                     Some(line) => {
-                                        println!("{}{}{}:{}{}{}- {}",
-                                            GrepInFile::COLOUR_FILE, self.file_path.display(), GrepInFile::COLOUR_END,
-                                            GrepInFile::COLOUR_LINE, line_number, GrepInFile::COLOUR_END, &line);
+                                        self.print_match_line(line_number, "-", &line);
                                         line_number += 1;
                                     },
                                     None => break
                                 }
                             }
-                            println!("{}{}{}:{}{}{}: {}{}{}{}{}",
-                                GrepInFile::COLOUR_FILE, self.file_path.display(), GrepInFile::COLOUR_END,
-                                GrepInFile::COLOUR_LINE, self.line_number, GrepInFile::COLOUR_END,
-                                &line[..m.start()], GrepInFile::COLOUR_MATCH, &line[m.range()], GrepInFile::COLOUR_END, &line[m.end()..]);
+                            let mut coloured_line = String::new();
+                            let mut last_end = 0;
+
+                            for m in &vec_m {
+                                let mut m_start = m.start;
+                                // deal with overlap
+                                if m_start < last_end {
+                                    m_start = last_end;
+                                }
+                                let colour_index = m.pattern_index % GrepInFile::COLOUR_MATCH.len();
+
+                                coloured_line.push_str(&line[last_end..m_start]);
+                                coloured_line.push_str(GrepInFile::COLOUR_MATCH[colour_index]);
+                                last_end = m.end;
+                                coloured_line.push_str(&line[m_start..last_end]);
+                                coloured_line.push_str(GrepInFile::COLOUR_END);
+                            }
+                            coloured_line.push_str(&line[last_end..line.len()]);
+
+                            self.print_match_line(self.line_number, ":", &coloured_line);
+
                             required_after = self.num_after;
                         }
                         None => {
@@ -145,20 +195,52 @@ impl <'caller> GrepInFile<'caller> {
                                     self.before_lines.pop_front();
                                 }
                             }
+                            if required_after > 0 {
+                                self.print_match_line(self.line_number, "+", &line);
+                                required_after -= 1;
+                            }
                         }
-                    };
-
-                    if required_after > 0 {
-                        println!("{}{}{}:{}{}{}+ {}",
-                            GrepInFile::COLOUR_FILE, self.file_path.display(), GrepInFile::COLOUR_END,
-                            GrepInFile::COLOUR_LINE, self.line_number, GrepInFile::COLOUR_END, &line);
-                        required_after -= 1;
                     }
                 }
             }
         }
 
         Ok(())
+    }
+
+    const PADDING_SIZE: usize = 4;
+
+    fn print_match_line(&self, line_number: usize, sep: &str, line: &str) {
+        let path = self.file_path.display().to_string();
+        let line_number = line_number.to_string();
+
+        // len of path + ":" + 4 digits + sep + min-2-spaces
+        let prefix_len_max = path.len() + 1 + 4 + 1 + 2;
+        let prefix_len_min = path.len() + 1 + line_number.len() + 1 + 2;
+        let padding_required = ((prefix_len_max + (GrepInFile::PADDING_SIZE-1)) % GrepInFile::PADDING_SIZE) * GrepInFile::PADDING_SIZE;
+
+        let mut padding = String::new();
+        for _ in 0..(prefix_len_max + padding_required - prefix_len_min) {
+            if self.opt.debug {
+                padding.push_str("·")
+            } else {
+                padding.push_str(" ")
+            }
+        };
+
+        let mut match_report = String::new();
+        match_report.push_str(GrepInFile::COLOUR_FILE);
+        match_report.push_str(&path);
+        match_report.push_str(GrepInFile::COLOUR_END);
+        match_report.push_str(":");
+        match_report.push_str(GrepInFile::COLOUR_LINE);
+        match_report.push_str(&line_number);
+        match_report.push_str(GrepInFile::COLOUR_END);
+        match_report.push_str(sep);
+        match_report.push_str(&padding);
+        match_report.push_str(line);
+
+        println!("{}", match_report);
     }
 }
 

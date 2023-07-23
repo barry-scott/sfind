@@ -98,22 +98,24 @@ impl GrepPatterns {
 }
 
 fn colour_match_line(line: &str, matches: &[GrepMatch]) -> String {
-    let mut coloured_line = String::new();
+    let colour_codes_len = GrepInFile::COLOUR_MATCH[0].len() + GrepInFile::COLOUR_END.len();
+    let mut coloured_line = String::with_capacity(line.len() + colour_codes_len * matches.len());
     let mut last_end = 0;
 
     for m in matches {
-        let mut m_start = m.start;
         // deal with overlap
-        if m_start < last_end {
-            m_start = last_end;
-        }
+        let m_start = if m.start < last_end {
+            last_end
+        } else {
+            m.start
+        };
         let colour_index = m.pattern_index % GrepInFile::COLOUR_MATCH.len();
 
         coloured_line.push_str(&line[last_end..m_start]);
         coloured_line.push_str(GrepInFile::COLOUR_MATCH[colour_index]);
-        last_end = m.end;
-        coloured_line.push_str(&line[m_start..last_end]);
+        coloured_line.push_str(&line[m_start..m.end]);
         coloured_line.push_str(GrepInFile::COLOUR_END);
+        last_end = m.end;
     }
     coloured_line.push_str(&line[last_end..]);
 

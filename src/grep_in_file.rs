@@ -180,7 +180,7 @@ impl<'caller> GrepInFile<'caller> {
                 }
 
                 let before_lines = mem::take(&mut self.before_lines);
-                let line_number_base = self.line_number - self.before_lines.len();
+                let line_number_base = self.line_number - before_lines.len();
 
                 for (offset, before_line) in before_lines.into_iter().enumerate() {
                     self.print_match_line(line_number_base + offset, "-", &before_line);

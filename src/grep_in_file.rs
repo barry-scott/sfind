@@ -1,8 +1,8 @@
 use std::collections::VecDeque;
 use std::path::PathBuf;
 
-use std::fs;
 use std::io::{BufRead, BufReader};
+use std::{fs, iter};
 
 use anyhow::{anyhow, Result};
 use regex::{Regex, RegexBuilder};
@@ -207,14 +207,9 @@ impl<'caller> GrepInFile<'caller> {
             % GrepInFile::PADDING_SIZE)
             * GrepInFile::PADDING_SIZE;
 
-        let mut padding = String::new();
-        for _ in 0..(prefix_len_max + padding_required - prefix_len_min) {
-            if self.opt.debug {
-                padding.push('·')
-            } else {
-                padding.push(' ')
-            }
-        }
+        let padding: String = iter::repeat(if self.opt.debug { '·' } else { ' ' })
+            .take(prefix_len_max + padding_required - prefix_len_min)
+            .collect();
 
         println!(
             "{colour_file}{path}{colour_end}:{colour_line}{line_number}{colour_end}{sep}{padding}{line}",

@@ -16,11 +16,12 @@ pub struct ConfigJson {
 #[derive(Debug)]
 pub struct AppConfig {
     app_name: String,
+    pub config_path: PathBuf,
     pub config: ConfigJson,
 }
 
 static DEFAULT_CONFIG_JSON: &str = r#"{
-    "folders_to_prune": [".svn", ".git", ".hg"],
+    "folders_to_prune": [".svn", ".git", ".hg", "target"],
     "files_to_prune":   ["*~"]
 }
 "#;
@@ -43,6 +44,7 @@ impl AppConfig {
 
         let app_config = AppConfig {
             app_name: app_name.to_string(),
+            config_path: config_path.clone(),
             config: serde_json::from_str(&config_data).map_err(|e| {
                 anyhow!(
                     "Error parsing config {} - {}",
@@ -62,12 +64,25 @@ impl AppConfig {
         let config_path = self.config_file_path()?;
 
         if config_path.exists() {
-            return Err(anyhow!("config file already exists"));
+            return Err(anyhow!("config file already exists: {}", config_path.display()));
         }
 
+        println!("Saving default config in {}", config_path.display());
         let mut f = File::create(config_path)?;
         f.write_all(DEFAULT_CONFIG_JSON.as_bytes())?;
         Ok(())
+    }
+
+    pub fn show_config(&self) {
+        println!("smart find configuration from {}", self.config_file_path().unwrap().display());
+        println!("folders to prune:");
+        for folder in &self.config.folders_to_prune {
+            println!("    {}", folder);
+        }
+        println!("files to prune:");
+        for filename in &self.config.files_to_prune {
+            println!("    {}", filename);
+        }
     }
 }
 
@@ -82,8 +97,36 @@ cfg_if::cfg_if! {
         }
 
     } else if #[cfg(target_os = "windows")] {
+        use windows_sys::{
+            Win32::UI::Shell::*,
+            Win32::Foundation::*,
+        };
+
+        fn get_appdata_folder() -> Result<PathBuf> {
+            let mut path_buf = [0u16; MAX_PATH as usize];
+            let hresult = unsafe {
+                SHGetFolderPathW(
+                    0,
+                    CSIDL_APPDATA as i32,
+                    0,
+                    SHGFP_TYPE_CURRENT as u32,
+                    path_buf.as_mut_ptr())
+            };
+            if hresult != S_OK {
+                Err(anyhow!("SHGetFolderPathW failed {}", hresult))
+            } else {
+                use std::ffi::OsString;
+                use std::os::windows::ffi::OsStringExt as _;
+                let Some(length) = path_buf.iter().position(|&ch| ch == 0)
+                    else { return Err(anyhow!("missing 0 in SHGetFolderPathW buffer")); };
+                Ok(OsString::from_wide(&path_buf[0..length]).into())
+            }
+        }
+
         fn config_file_path(app_name: &str) -> Result<PathBuf> {
-            Err(anyhow!("No windows support yet!"))
+            let mut path = PathBuf::from(get_appdata_folder()?);
+            path.push(format!("{}.json", app_name));
+            Ok(path)
         }
 
     } else { // assume not mac and not windows can use xdg standard

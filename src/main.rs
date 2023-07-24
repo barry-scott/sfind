@@ -26,6 +26,22 @@ fn main() -> ExitCode {
         }
     };
 
+    if cmd_opt.save_default_config {
+        match cfg.save_default_config() {
+            Err(e) => {
+                println!("failed to save default config - {}", e);
+                return ExitCode::from(1);
+            }
+            Ok(()) => {
+                return ExitCode::SUCCESS;
+            }
+        }
+    }
+    if cmd_opt.show_config {
+        cfg.show_config();
+        return ExitCode::SUCCESS;
+    }
+
     if cmd_opt.debug {
         dbg!(&cfg);
     };

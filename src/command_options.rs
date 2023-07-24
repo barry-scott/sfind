@@ -14,8 +14,11 @@ struct Cli {
     #[arg(long)]
     pub debug: bool,
 
-    #[arg(long, help = "write the default config info <TBD>")]
+    #[arg(long, help = "write the default settings into the config file")]
     pub save_default_config: bool,
+
+    #[arg(long, help = "show the config settings file")]
+    pub show_config: bool,
 
     #[arg(short = 'S', long = "asis", help = "find file names matching case")]
     pub case_sensitive_filenames: bool,
@@ -47,6 +50,7 @@ pub struct CommandOptions {
     pub progname: String,
     pub debug: bool,
     pub save_default_config: bool,
+    pub show_config: bool,
     pub find_iname: bool,
     pub grep_ignore_case: bool,
     pub grep_lines_after: Option<usize>,
@@ -74,6 +78,7 @@ impl CommandOptions {
             progname,
             debug: cli.debug,
             save_default_config: cli.save_default_config,
+            show_config: cli.show_config,
             find_iname: !cli.case_sensitive_filenames,
             grep_ignore_case: !cli.case_sensitive_contents,
             grep_lines_after: cli.after,

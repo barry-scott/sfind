@@ -37,7 +37,7 @@ fn fixed_to_regex(fixed: &str, case_insensitive: bool) -> Result<Regex> {
         .map_err(|_| anyhow!("failed to compile regex for {}", fixed))
 }
 
-fn pattern_to_refex(pattern: &str, case_insensitive: bool) -> Result<Regex> {
+fn pattern_to_regex(pattern: &str, case_insensitive: bool) -> Result<Regex> {
     RegexBuilder::new(pattern)
         .case_insensitive(case_insensitive)
         .build()
@@ -53,7 +53,7 @@ impl GrepPatterns {
         let regex = opt
             .regex_patterns
             .iter()
-            .map(|pattern| pattern_to_refex(pattern, opt.grep_ignore_case));
+            .map(|pattern| pattern_to_regex(pattern, opt.grep_ignore_case));
 
         let patterns: Result<Vec<_>> = fixed.chain(regex).collect();
         let patterns = patterns?;

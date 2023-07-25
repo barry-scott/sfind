@@ -64,7 +64,10 @@ impl AppConfig {
         let config_path = self.config_file_path()?;
 
         if config_path.exists() {
-            return Err(anyhow!("config file already exists: {}", config_path.display()));
+            return Err(anyhow!(
+                "config file already exists: {}",
+                config_path.display()
+            ));
         }
 
         println!("Saving default config in {}", config_path.display());
@@ -74,7 +77,10 @@ impl AppConfig {
     }
 
     pub fn show_config(&self) {
-        println!("smart find configuration from {}", self.config_file_path().unwrap().display());
+        println!(
+            "smart find configuration from {}",
+            self.config_file_path().unwrap().display()
+        );
         println!("folders to prune:");
         for folder in &self.config.folders_to_prune {
             println!("    {}", folder);

@@ -1,8 +1,6 @@
 use std::env;
 use std::process::ExitCode;
 
-
-
 fn main() -> ExitCode {
     let args: Vec<String> = env::args().collect();
 
@@ -47,9 +45,7 @@ fn main() -> ExitCode {
     };
 
     match sfind::run(cmd_opt, cfg) {
-        Ok(_) => {
-            ExitCode::SUCCESS
-        }
+        Ok(_) => ExitCode::SUCCESS,
         Err(error) => {
             eprintln!("Error: {error}");
             ExitCode::from(1)

@@ -34,7 +34,7 @@ macro_rules! continue_on_err {
         match $val {
             Ok(v) => v,
             Err(e) => {
-                println!($msg, e);
+                eprintln!($msg, e);
                 continue;
             }
         }
@@ -86,7 +86,7 @@ impl<'caller> FindFiles<'caller> {
 
             match fs::read_dir(path_to_scan.path.clone()) {
                 Err(e) => {
-                    println!("error read_dir {} - {}", path_to_scan.path.display(), e);
+                    eprintln!("Error: read_dir {} - {}", path_to_scan.path.display(), e);
                     continue;
                 }
                 Ok(entry) => {
@@ -103,7 +103,7 @@ impl<'caller> FindFiles<'caller> {
     fn push_folder(&mut self, path_to_scan: PathToScan) {
         if self.exclude_folder(&path_to_scan.path) {
             if self.opt.debug {
-                println!("exclude folder {:?}", path_to_scan);
+                eprintln!("Debug: exclude folder {:?}", path_to_scan);
             }
         } else {
             self.folders.push_back(path_to_scan)
@@ -123,7 +123,7 @@ impl<'caller> FindFiles<'caller> {
                 false
             } else {
                 if self.opt.debug {
-                    println!("include_file {:?}", entry.path());
+                    eprintln!("Debug: include_file {:?}", entry.path());
                 }
                 true
             }
@@ -131,12 +131,12 @@ impl<'caller> FindFiles<'caller> {
             // exclude files that are config to be pruned
             if self.exclude_file(entry) {
                 if self.opt.debug {
-                    println!("exclude_file {:?}", entry.path());
+                    eprintln!("Debug: exclude_file {:?}", entry.path());
                 }
                 false
             } else {
                 if self.opt.debug {
-                    println!("file not included or excluded {:?}", entry.path());
+                    eprintln!("Debug: file not included or excluded {:?}", entry.path());
                 }
                 true
             }
@@ -180,12 +180,12 @@ impl<'caller> FindFiles<'caller> {
                     Some(folder_name) => {
                         let exclude = regex.is_match(folder_name);
                         if self.opt.debug {
-                            println!("exclude {} -> {:?}", folder_name, exclude);
+                            eprintln!("Debug: exclude {} -> {:?}", folder_name, exclude);
                         }
                         exclude
                     }
                     None => {
-                        println!("folder_name is not utf-8");
+                        eprintln!("Error: folder_name is not utf-8");
                         true
                     }
                 }
@@ -200,7 +200,7 @@ impl<'caller> FindFiles<'caller> {
                 if let Ok(file_name) = entry.file_name().into_string() {
                     regex.is_match(&file_name)
                 } else {
-                    println!("file_name is not utf-8 {}", entry.path().display());
+                    eprintln!("Error: file_name is not utf-8 {}", entry.path().display());
                     false
                 }
             })
@@ -235,7 +235,7 @@ impl<'caller> FindFiles<'caller> {
             {
                 Ok(regex) => Some(regex),
                 Err(e) => {
-                    println!("bad pattern {} - {}", prune_pattern, e);
+                    eprintln!("Error: bad pattern {} - {}", prune_pattern, e);
                     None
                 }
             }

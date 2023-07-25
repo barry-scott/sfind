@@ -9,7 +9,7 @@ fn main() -> ExitCode {
     let cmd_opt = match sfind::CommandOptions::new(&args) {
         Ok(opt) => opt,
         Err(error) => {
-            println!("Error: {error}");
+            eprintln!("Error: {error}");
             return ExitCode::from(1);
         }
     };
@@ -21,7 +21,7 @@ fn main() -> ExitCode {
     let cfg = match sfind::AppConfig::new("org.barrys-emacs.smart-find") {
         Ok(cfg) => cfg,
         Err(error) => {
-            println!("Error: {error}");
+            eprintln!("Error: {error}");
             return ExitCode::from(1);
         }
     };
@@ -29,7 +29,7 @@ fn main() -> ExitCode {
     if cmd_opt.save_default_config {
         match cfg.save_default_config() {
             Err(e) => {
-                println!("failed to save default config - {}", e);
+                eprintln!("Error: Failed to save default config - {}", e);
                 return ExitCode::from(1);
             }
             Ok(()) => {
@@ -51,7 +51,7 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS
         }
         Err(error) => {
-            println!("Error: {error}");
+            eprintln!("Error: {error}");
             ExitCode::from(1)
         }
     }

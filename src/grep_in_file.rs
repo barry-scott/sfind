@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 use std::path::PathBuf;
 
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Read, Seek};
 use std::{fs, iter, mem};
 
 use anyhow::{anyhow, Result};
@@ -151,7 +151,27 @@ impl<'caller> GrepInFile<'caller> {
     const COLOUR_END: &str = "\x1b[m"; // no colour
 
     pub fn search(&mut self) -> Result<()> {
-        let file = fs::File::open(self.file_path)?;
+        let mut file = fs::File::open(self.file_path)?;
+        let mut bin_check_buf = [0u8; 1024];
+        let check_len = file.read(&mut bin_check_buf[..])?;
+
+        // is first line possibly binary?
+        for byte in &mut bin_check_buf[0..check_len] {
+            match byte {
+                0 | 1 => {
+                    if self.opt.debug {
+                        eprintln!("Debug: assuming binary file {}", self.file_path.display())
+                    }
+                    return Ok(());
+                }
+                _ => {
+                    continue;
+                }
+            }
+        }
+
+        file.rewind()?;
+
         let reader = BufReader::new(file);
 
         let mut required_after = 0;
@@ -176,7 +196,7 @@ impl<'caller> GrepInFile<'caller> {
                 }
             } else {
                 if self.opt.debug {
-                    println!("find_match: {:?}", vec_m);
+                    eprintln!("Debug: find_match: {:?}", vec_m);
                 }
 
                 let before_lines = mem::take(&mut self.before_lines);

@@ -221,15 +221,14 @@ impl<'caller> GrepInFile<'caller> {
         let path = self.file_path.display().to_string();
         let line_number = line_number.to_string();
 
-        // len of path + ":" + 4 digits + sep + min-2-spaces
-        let prefix_len_max = path.len() + 1 + 4 + 1 + 2;
-        let prefix_len_min = path.len() + 1 + line_number.len() + 1 + 2;
-        let padding_required = ((prefix_len_max + (GrepInFile::PADDING_SIZE - 1))
+        // len of path + ":" + min 4 digits + sep + min-2-spaces
+        let prefix_len = path.len() + 1 + std::cmp::max(4, line_number.len()) + 1 + 2;
+        let padding_required = ((prefix_len + (GrepInFile::PADDING_SIZE - 1))
             % GrepInFile::PADDING_SIZE)
             * GrepInFile::PADDING_SIZE;
 
         let padding: String = iter::repeat(if self.opt.debug { '·' } else { ' ' })
-            .take(prefix_len_max + padding_required - prefix_len_min)
+            .take(prefix_len + padding_required)
             .collect();
 
         println!(

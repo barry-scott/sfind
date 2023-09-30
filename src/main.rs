@@ -1,5 +1,6 @@
 use std::env;
 use std::process::ExitCode;
+use clap;
 
 fn main() -> ExitCode {
     let args: Vec<String> = env::args().collect();
@@ -7,7 +8,19 @@ fn main() -> ExitCode {
     let cmd_opt = match sfind::CommandOptions::new(&args) {
         Ok(opt) => opt,
         Err(error) => {
-            eprintln!("Error: {error}");
+            // there must be a better way to see if the text is from clap...
+            use clap::error::ErrorKind;
+            match error.downcast_ref::<clap::error::Error>() {
+                Some(error) if matches!(error.kind(),
+                    ErrorKind::DisplayHelp | ErrorKind::UnknownArgument |
+                    ErrorKind::TooFewValues | ErrorKind::InvalidValue) => {
+                        println!("{error}")
+                    }
+                Some(error) => {
+                        eprintln!("Error: {error}\nkind: {:?}", error.kind())
+                    }
+                None => eprintln!("Error: {error}")
+                }
             return ExitCode::from(1);
         }
     };

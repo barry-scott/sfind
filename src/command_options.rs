@@ -4,16 +4,15 @@ use std::path::PathBuf;
 
 #[derive(Debug, Parser)]
 #[command(name = "sfind")]
-#[command(version = "1.0")]
+#[command(version = env!("CARGO_PKG_VERSION"))]
 #[command(
-    about = "smart find",
-    long_about = r#"Search for all <filename>'s in all <dir>'s
-    If -contains is present grep for all <patterns> in the found files."#
+    about = "sfind - smart find files and contents",
+    long_about = r#"sfind Search for all filename PATHs in all folder PATHs
+
+If --fixed (-f) or --regex (-r) is present grep for all <patterns>
+in the found files."#
 )]
 struct Cli {
-    #[arg(long)]
-    pub debug: bool,
-
     #[arg(long, help = "write the default settings into the config file")]
     pub save_default_config: bool,
 
@@ -43,6 +42,9 @@ struct Cli {
 
     #[arg(value_name = "PATH", help = "Files and Folders to find")]
     pub positional: Vec<PathBuf>,
+
+    #[arg(long, help = "print infomation useful for debugging problems with sfind")]
+    pub debug: bool,
 }
 
 #[derive(Debug)]

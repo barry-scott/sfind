@@ -44,14 +44,17 @@ aarch64)
 esac
 
 rm -rf tmp
-mkdir tmp
+mkdir -p tmp/{SPECS,SOURCES}
 
 colour-print "<>info Info:<> make source"
-git archive main --format=tar --prefix=sfind-${RPM_VERSION}/ --output=tmp/sfind-${RPM_VERSION}.crate
-cd tmp
+git archive main --format=tar --prefix=sfind-${RPM_VERSION}/ --output=tmp/SOURCES/sfind-${RPM_VERSION}.crate
+cp Cargo.toml tmp/Cargo.toml.orig
+cd tmp/SOURCES
 colour-print "<>info Info:<> make specfile"
-rust2rpm ..
-cd ..
+rust2rpm ../..
+mv *.spec ../SPECS
+cd ../..
+cp tmp/Cargo.toml.orig Cargo.toml
 
 . /etc/os-release
 
@@ -65,9 +68,8 @@ ls -l tmp
 mock \
     --buildsrpm \
     --root ${MOCK_SRPM_ROOT} \
-    --spec tmp/rust-sfind.spec \
-    --sources tmp/sfind-${RPM_VERSION}.crate
-
+    --spec tmp/SPECS/rust-sfind.spec \
+    --sources tmp/SOURCES
 
 colour-print "<>info Info:<> copy SRPM"
 ls -l /var/lib/mock/${MOCK_SRPM_ROOT}/result

@@ -101,7 +101,7 @@ impl CommandOptions {
                         opt.files.push(file.to_string());
                     }
                     None => {
-                        println!("filename is not utf-8 {}", path.display());
+                        eprintln!("filename is not utf-8 {}", path.display());
                     }
                 };
             }

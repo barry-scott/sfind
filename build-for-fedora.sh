@@ -5,7 +5,7 @@ RPM_VERSION="${RPM_VERSION#version = \"}"
 RPM_VERSION="${RPM_VERSION%\"}"
 
 function usage {
-    colour-print "<>error Usage: <> $0 copr-release|copr-testing|mock [x86_64|aarch64]"
+    colour-print "<>error Usage: <> $0 copr-release|copr-testing|mock [x86_64|aarch64] [<fedora-release>]"
 }
 
 case "$1" in
@@ -43,6 +43,19 @@ aarch64)
     ;;
 esac
 
+case "$3" in
+[0-9][0-9])
+    VERSION_ID=$3
+    ;;
+"")
+    . /etc/os-release
+    ;;
+*)
+    usage
+    exit 1
+    ;;
+esac
+
 rm -rf tmp
 mkdir -p tmp/{SPECS,SOURCES}
 
@@ -55,8 +68,6 @@ rust2rpm ../..
 mv *.spec ../SPECS
 cd ../..
 cp tmp/Cargo.toml.orig Cargo.toml
-
-. /etc/os-release
 
 # use host's arch for srpm
 MOCK_SRPM_ROOT=fedora-${VERSION_ID}-$(arch)
@@ -79,13 +90,14 @@ SRPM=tmp/rust-sfind-${RPM_VERSION}-*.src.rpm
 
 case "$CMD" in
 copr)
-    set -x
     colour-print "<>info Info:<> copr build <>em $COPR_REPO<> of <>em ${SRPM}<> for <>em $ARCH<>"
+    set -x
     copr-cli build -r ${MOCK_RPM_ROOT} ${COPR_REPO} ${SRPM}
     ;;
 
 mock)
     colour-print "<>info Info:<> build RPM for <>em $ARCH<>"
+    set -x
     mock \
         --rebuild \
         --root ${MOCK_RPM_ROOT} \

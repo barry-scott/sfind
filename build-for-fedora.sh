@@ -27,6 +27,7 @@ mock)
     exit 1
     ;;
 esac
+
 case "$2" in
 x86_64)
     ARCH=x86_64
@@ -44,6 +45,10 @@ aarch64)
 esac
 
 case "$3" in
+rawhide)
+    VERSION_ID=$3
+    ;;
+
 [0-9][0-9])
     VERSION_ID=$3
     ;;
@@ -61,13 +66,11 @@ mkdir -p tmp/{SPECS,SOURCES}
 
 colour-print "<>info Info:<> make source"
 git archive main --format=tar --prefix=sfind-${RPM_VERSION}/ --output=tmp/SOURCES/sfind-${RPM_VERSION}.crate
-cp Cargo.toml tmp/Cargo.toml.orig
 cd tmp/SOURCES
 colour-print "<>info Info:<> make specfile"
-rust2rpm ../..
+rust2rpm ./sfind-${RPM_VERSION}.crate
 mv *.spec ../SPECS
 cd ../..
-cp tmp/Cargo.toml.orig Cargo.toml
 
 # use host's arch for srpm
 MOCK_SRPM_ROOT=fedora-${VERSION_ID}-$(arch)
@@ -103,7 +106,7 @@ mock)
         --root ${MOCK_RPM_ROOT} \
             tmp/rust-sfind-${RPM_VERSION}-*.src.rpm
     ls -l /var/lib/mock/${MOCK_RPM_ROOT}/result
-    cp -v /var/lib/mock/${MOCK_RPM_ROOT}/result/sfind-${RPM_VERSION}*${ARCH}.rpm tmp
+    cp -v /var/lib/mock/${MOCK_RPM_ROOT}/result/rust-sfind-${RPM_VERSION}*${ARCH}.rpm tmp
     ;;
 
 *)

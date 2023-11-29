@@ -194,11 +194,19 @@ impl<'caller> FindFiles<'caller> {
         }
     }
 
-    fn match_file(&self, match_regex: Option<&Regex>, entry: &fs::DirEntry) -> bool {
+    fn match_file(&self, match_regex: Option<&Regex>, entry: &fs::DirEntry, match_basename: bool) -> bool {
         match_regex
             .map(|regex| {
-                if let Ok(file_name) = entry.file_name().into_string() {
-                    regex.is_match(&file_name)
+                if let Ok(path_or_file_name) =
+                        if match_basename {
+                            entry.file_name().into_string()
+                        } else {
+                            entry.path().into_os_string().into_string()
+                        }
+                    {
+                    //eprintln!("QQQ path_or_file_name {}", path_or_file_name);
+                    //eprintln!("QQQ regex {}", regex);
+                    regex.is_match(&path_or_file_name)
                 } else {
                     eprintln!("Error: file_name is not utf-8 {}", entry.path().display());
                     false
@@ -208,11 +216,11 @@ impl<'caller> FindFiles<'caller> {
     }
 
     fn include_file(&self, entry: &fs::DirEntry) -> bool {
-        self.match_file(self.files_to_find.as_ref(), entry)
+        self.match_file(self.files_to_find.as_ref(), entry, self.opt.find_match_basename)
     }
 
     fn exclude_file(&self, entry: &fs::DirEntry) -> bool {
-        self.match_file(self.files_to_prune.as_ref(), entry)
+        self.match_file(self.files_to_prune.as_ref(), entry, true)
     }
 
     fn match_filenames_regex(all_patterns: &[String], case_insensitive: bool) -> Option<Regex> {
@@ -290,6 +298,10 @@ mod tests {
 
         let regex = Regex::new("^(a.*|b.*)$").unwrap();
         let haystack = String::from("abc.txt");
+        assert!(regex.is_match(&haystack));
+
+        let regex = Regex::new("^(.*fedora.*)$").unwrap();
+        let haystack = String::from(".password-store/fedoraproject.org/otp.gpg");
         assert!(regex.is_match(&haystack));
     }
 

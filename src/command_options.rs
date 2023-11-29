@@ -25,6 +25,9 @@ struct Cli {
     #[arg(short = 's', long = "sensitive", help = "match regex case sensitively")]
     pub case_sensitive_contents: bool,
 
+    #[arg(short = 'p', long = "path", help = "match file names anywhere in the full path")]
+    pub match_path: bool,
+
     #[arg(short, long, value_name = "LINES", help = "lines to show after match")]
     pub after: Option<usize>,
 
@@ -54,6 +57,7 @@ pub struct CommandOptions {
     pub save_default_config: bool,
     pub show_config: bool,
     pub find_iname: bool,
+    pub find_match_basename: bool,
     pub grep_ignore_case: bool,
     pub grep_lines_after: Option<usize>,
     pub grep_lines_before: Option<usize>,
@@ -82,6 +86,7 @@ impl CommandOptions {
             save_default_config: cli.save_default_config,
             show_config: cli.show_config,
             find_iname: !cli.case_sensitive_filenames,
+            find_match_basename: !cli.match_path,
             grep_ignore_case: !cli.case_sensitive_contents,
             grep_lines_after: cli.after,
             grep_lines_before: cli.before,

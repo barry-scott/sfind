@@ -139,8 +139,8 @@ impl<'caller> GrepInFile<'caller> {
         }
     }
 
-    const COLOUR_FILE: &str = "\x1b[35m"; // purple
-    const COLOUR_LINE: &str = "\x1b[32m"; // green
+    const COLOUR_FILE: &'static str = "\x1b[35m"; // purple
+    const COLOUR_LINE: &'static str = "\x1b[32m"; // green
     const COLOUR_MATCH: &'static [&'static str] = &[
         "\x1b[1;31m", // light red
         "\x1b[33m",   // yellow
@@ -148,7 +148,7 @@ impl<'caller> GrepInFile<'caller> {
         "\x1b[32m",   // green
         "\x1b[35m",   // purple
     ];
-    const COLOUR_END: &str = "\x1b[m"; // no colour
+    const COLOUR_END: &'static str = "\x1b[m"; // no colour
 
     pub fn search(&mut self) -> Result<()> {
         let mut file = fs::File::open(self.file_path)?;

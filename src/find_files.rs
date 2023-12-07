@@ -57,8 +57,15 @@ impl<'caller> Iterator for FindFiles<'caller> {
                     let entry = continue_on_err!(entry, "error read_dir next 2 {}");
                     let m = continue_on_err!(entry.metadata(), "error read_dir metadata {}");
 
+                    let is_dir = if m.is_symlink() {
+                        let m = continue_on_err!(fs::metadata(entry.path()), "error read_dir os symlink {}");
+                        m.is_dir()
+                    } else {
+                        m.is_dir()
+                    };
+
                     // add this dir to the list of folders to be scanned
-                    if m.is_dir() {
+                    if is_dir {
                         // only go deeper if allowed.
                         if self.go_deeper() {
                             self.push_folder(PathToScan::new(entry.path(), self.cur_depth + 1));

@@ -14,7 +14,7 @@ fn main() -> ExitCode {
                 Some(error) if matches!(error.kind(),
                     ErrorKind::DisplayHelp | ErrorKind::UnknownArgument |
                     ErrorKind::TooFewValues | ErrorKind::InvalidValue) => {
-                        println!("{error}")
+                        eprintln!("{error}")
                     }
                 Some(error) => {
                         eprintln!("Error: {error}\nkind: {:?}", error.kind())

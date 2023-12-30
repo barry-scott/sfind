@@ -28,7 +28,7 @@ pub fn run(opt: CommandOptions, cfg: AppConfig) -> Result<()> {
             }
             let mut grep_in_file = GrepInFile::new(&opt, &path, &patterns);
             if let Err(e) = grep_in_file.search() {
-                println!("error {}", e);
+                eprintln!("{}", e);
             }
         }
     }

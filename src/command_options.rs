@@ -37,6 +37,9 @@ struct Cli {
     #[arg(short, long, help = "number of folder levels to search")]
     pub depth: Option<usize>,
 
+    #[arg(long, help = "report supressed errors")]
+    pub errors: bool,
+
     #[arg(short, long, value_name = "REGEX", help = "regex pattern to find")]
     pub regex: Vec<String>,
 
@@ -56,6 +59,7 @@ pub struct CommandOptions {
     pub debug: bool,
     pub save_default_config: bool,
     pub show_config: bool,
+    pub report_supressed_errors: bool,
     pub find_iname: bool,
     pub find_match_basename: bool,
     pub grep_ignore_case: bool,
@@ -85,6 +89,7 @@ impl CommandOptions {
             debug: cli.debug,
             save_default_config: cli.save_default_config,
             show_config: cli.show_config,
+            report_supressed_errors: cli.errors,
             find_iname: !cli.case_sensitive_filenames,
             find_match_basename: !cli.match_path,
             grep_ignore_case: !cli.case_sensitive_contents,

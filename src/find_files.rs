@@ -30,11 +30,13 @@ impl PathToScan {
 }
 
 macro_rules! continue_on_err {
-    ($val:expr, $msg:literal, $file:expr) => {
+    ($report:expr, $val:expr, $msg:literal, $file:expr) => {
         match $val {
             Ok(v) => v,
             Err(e) => {
-                eprintln!($msg, $file, e);
+                if($report) {
+                    eprintln!($msg, $file, e);
+                }
                 continue;
             }
         }
@@ -54,11 +56,11 @@ impl<'caller> Iterator for FindFiles<'caller> {
                     continue;
                 }
                 Some(entry) => {
-                    let entry = continue_on_err!(entry, "error read_dir next 2 {} - {}", "");
-                    let m = continue_on_err!(entry.metadata(), "error read_dir metadata {} - {}", entry.path().display());
+                    let entry = continue_on_err!(true, entry, "error read_dir next 2 {} - {}", "");
+                    let m = continue_on_err!(true, entry.metadata(), "error read_dir metadata {} - {}", entry.path().display());
 
                     let is_dir = if m.is_symlink() {
-                        let m = continue_on_err!(fs::metadata(entry.path()), "error read_dir os symlink {} - {}", entry.path().display());
+                        let m = continue_on_err!(self.opt.report_supressed_errors, fs::metadata(entry.path()), "error read_dir os symlink {} - {}", entry.path().display());
                         m.is_dir()
                     } else {
                         m.is_dir()

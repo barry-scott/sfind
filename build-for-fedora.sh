@@ -108,7 +108,7 @@ mock)
         --root ${MOCK_RPM_ROOT} \
             tmp/rust-sfind-${RPM_VERSION}-*.src.rpm
     ls -l /var/lib/mock/${MOCK_RPM_ROOT}/result
-    cp -v /var/lib/mock/${MOCK_RPM_ROOT}/result/rust-sfind-${RPM_VERSION}*${ARCH}.rpm tmp
+    cp -v /var/lib/mock/${MOCK_RPM_ROOT}/result/sfind-${RPM_VERSION}*${ARCH}.rpm tmp
     ;;
 
 *)

@@ -16,6 +16,7 @@ regex = "1.9.1"
 serde = {version = "1.0", features = ["derive"]}
 serde_json = "1.0"
 thiserror = "1.0.43"
+encoding = "0.2"
 
 [target.'cfg(not(any(target_os = "macos", target_os = "windows")))'.dependencies]
 xdg = "2.5"

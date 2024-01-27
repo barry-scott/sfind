@@ -7,6 +7,9 @@ use std::{fs, iter, mem};
 use anyhow::{anyhow, Result};
 use regex::{Regex, RegexBuilder};
 
+use encoding::{Encoding, DecoderTrap};
+use encoding::all::{UTF_8, ISO_8859_1};
+
 pub use crate::command_options::CommandOptions;
 
 pub struct GrepPatterns {
@@ -172,19 +175,32 @@ impl<'caller> GrepInFile<'caller> {
 
         file.rewind()?;
 
-        let reader = BufReader::new(file);
+        let mut reader = BufReader::with_capacity(1024*1024, file);
 
         let mut required_after = 0;
 
-        for line_result in reader.lines() {
-            let line = line_result
+        loop {
+            let mut line_buf = vec![];
+            let len = reader.read_until(0x0a, &mut line_buf)
                 .map_err(|e| anyhow!("Error reading {} - {}", self.file_path.display(), e))?;
+            if len == 0 {
+                return Ok(());
+            }
+
+            let line = match UTF_8.decode(&line_buf, DecoderTrap::Strict) {
+                Ok(s) => s,
+                Err(_) => {
+                    ISO_8859_1.decode(&line_buf, DecoderTrap::Ignore).unwrap()
+                }
+            };
+
             self.line_number += 1;
 
             let vec_m = self.patterns.find_match(&line);
             if vec_m.is_empty() {
                 // No matches
                 if self.num_before > 0 {
+
                     self.before_lines.push_back(line.clone());
                     if self.before_lines.len() > self.num_before {
                         self.before_lines.pop_front();
@@ -211,8 +227,6 @@ impl<'caller> GrepInFile<'caller> {
                 required_after = self.num_after;
             }
         }
-
-        Ok(())
     }
 
     const PADDING_SIZE: usize = 4;

@@ -62,13 +62,15 @@ rawhide)
 esac
 
 rm -rf tmp
-mkdir -p tmp/{SPECS,SOURCES}
+mkdir -p tmp/{SPECS,SOURCES,tmpdir}
 
 colour-print "<>info Info:<> make source"
 git archive main --format=tar --prefix=sfind-${RPM_VERSION}/ --output=tmp/SOURCES/sfind-${RPM_VERSION}.crate
 cd tmp/SOURCES
 colour-print "<>info Info:<> make specfile"
-rust2rpm ./sfind-${RPM_VERSION}.crate
+# rust2rpm fails on one host becuase of some unknown issue with TMPDIR
+# using an empty directory works around the failure
+TMPDIR=$PWD/tmp/tmpdir rust2rpm ./sfind-${RPM_VERSION}.crate
 mv *.spec ../SPECS
 cd ../..
 

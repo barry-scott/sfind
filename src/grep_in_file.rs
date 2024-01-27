@@ -187,12 +187,15 @@ impl<'caller> GrepInFile<'caller> {
                 return Ok(());
             }
 
-            let line = match UTF_8.decode(&line_buf, DecoderTrap::Strict) {
+            let mut line = match UTF_8.decode(&line_buf, DecoderTrap::Strict) {
                 Ok(s) => s,
                 Err(_) => {
                     ISO_8859_1.decode(&line_buf, DecoderTrap::Ignore).unwrap()
                 }
             };
+            if line.ends_with("\n") {
+                line.truncate(line.len()-1);
+            }
 
             self.line_number += 1;
 

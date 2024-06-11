@@ -1,6 +1,6 @@
 [package]
 name = "sfind"
-version = "0.2.8"
+version = "0.3.0"
 edition = "2021"
 license = "Apache-2.0"
 description = "smart find utility - find files based on name or contents"
@@ -16,7 +16,7 @@ regex = "1.9.1"
 serde = {version = "1.0", features = ["derive"]}
 serde_json = "1.0"
 thiserror = "1.0.43"
-encoding = "0.2"
+encoding_rs = "0.8"
 
 [target.'cfg(not(any(target_os = "macos", target_os = "windows")))'.dependencies]
 xdg = "2.5"

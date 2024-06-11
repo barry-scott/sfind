@@ -7,8 +7,7 @@ use std::{fs, iter, mem};
 use anyhow::{anyhow, Result};
 use regex::{Regex, RegexBuilder};
 
-use encoding::{Encoding, DecoderTrap};
-use encoding::all::{UTF_8, ISO_8859_1};
+use encoding_rs::{UTF_8, WINDOWS_1252};
 
 pub use crate::command_options::CommandOptions;
 
@@ -187,12 +186,16 @@ impl<'caller> GrepInFile<'caller> {
                 return Ok(());
             }
 
-            let mut line = match UTF_8.decode(&line_buf, DecoderTrap::Strict) {
-                Ok(s) => s,
-                Err(_) => {
-                    ISO_8859_1.decode(&line_buf, DecoderTrap::Ignore).unwrap()
+            let cow_line = {
+                let (cow_utf8, _encoding_used, had_errors) = UTF_8.decode(&line_buf);
+                if !had_errors {
+                    cow_utf8
+                } else {
+                    let (cow_1252, _encoding_used, _had_errors) = WINDOWS_1252.decode(&line_buf);
+                    cow_1252
                 }
             };
+            let mut line = cow_line.to_string();
             if line.ends_with("\n") {
                 line.truncate(line.len()-1);
             }
@@ -204,7 +207,7 @@ impl<'caller> GrepInFile<'caller> {
                 // No matches
                 if self.num_before > 0 {
 
-                    self.before_lines.push_back(line.clone());
+                    self.before_lines.push_back(line.to_string());
                     if self.before_lines.len() > self.num_before {
                         self.before_lines.pop_front();
                     }

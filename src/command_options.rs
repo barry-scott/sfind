@@ -1,16 +1,18 @@
 use anyhow::{anyhow, Result};
 use clap::Parser;
 use std::path::PathBuf;
+use indoc::indoc;
 
 #[derive(Debug, Parser)]
 #[command(name = "sfind")]
 #[command(version = env!("CARGO_PKG_VERSION"))]
 #[command(
     about = "sfind - smart find files and contents",
-    long_about = r#"sfind Search for all filename PATHs in all folder PATHs
+    long_about = indoc! {"
+        sfind Search for all filename PATHs in all folder PATHs
 
-If --fixed (-f) or --regex (-r) is present grep for all <patterns>
-in the found files."#
+        If --fixed (-f) or --regex (-r) is present grep for all <patterns>
+        in the found files."}
 )]
 struct Cli {
     #[arg(long, help = "write the default settings into the config file")]
@@ -27,6 +29,12 @@ struct Cli {
 
     #[arg(short = 'p', long = "path", help = "match file names anywhere in the full path")]
     pub match_path: bool,
+
+    #[arg(short = 't', long = "times", help = indoc! {"
+        match file based on time <from> | <from>,<until>
+        where <from> and <until> in days is <num>d, hours is <num>h"
+        })]
+    pub times: Option<String>,
 
     #[arg(short, long, value_name = "LINES", help = "lines to show after match")]
     pub after: Option<usize>,
@@ -62,6 +70,8 @@ pub struct CommandOptions {
     pub report_supressed_errors: bool,
     pub find_iname: bool,
     pub find_match_basename: bool,
+    pub time_from: Option<usize>,
+    pub time_till: Option<usize>,
     pub grep_ignore_case: bool,
     pub grep_lines_after: Option<usize>,
     pub grep_lines_before: Option<usize>,
@@ -84,6 +94,10 @@ impl CommandOptions {
         };
 
         let cli = Cli::try_parse()?;
+
+        // parse times
+        let (time_from, time_till) = Self::parse_times(&cli.times)?;
+
         let mut opt = CommandOptions {
             progname,
             debug: cli.debug,
@@ -92,6 +106,8 @@ impl CommandOptions {
             report_supressed_errors: cli.errors,
             find_iname: !cli.case_sensitive_filenames,
             find_match_basename: !cli.match_path,
+            time_from: time_from,
+            time_till: time_till,
             grep_ignore_case: !cli.case_sensitive_contents,
             grep_lines_after: cli.after,
             grep_lines_before: cli.before,
@@ -122,5 +138,79 @@ impl CommandOptions {
         }
 
         Ok(opt)
+    }
+
+    fn parse_times(time_opt: &Option<String>) -> Result<(Option<usize>, Option<usize>)> {
+        match time_opt {
+            None => {
+                Ok((None, None))
+            }
+            Some(time_str) => {
+                let v: Vec<&str> = time_str.split(',').collect();
+                match v.len() {
+                    1 => {
+                        Ok((Some(Self::parse_time(v[0])?), None))
+                    }
+                    2 => {
+                        Ok((Some(Self::parse_time(v[0])?), Some(Self::parse_time(v[1])?)))
+                    }
+                    _ => {
+                        Err(anyhow!("Too many times"))
+                    }
+                }
+            }
+        }
+    }
+
+
+    fn parse_time(time_str: &str) -> Result<usize> {
+        if time_str.len() == 0 {
+            return Err(anyhow!("blank time string"))
+        }
+        macro_rules! time_error {
+            () => {
+                Err(anyhow!("expecting 0-9 followed by s, m, h or d"))
+            };
+        }
+        macro_rules! check_scale {
+            ($scale:expr) => {
+                if $scale != 0 {
+                    return time_error!()
+                }
+            };
+        }
+
+        let mut num: usize = 0;
+        let mut scale: usize = 0;
+        for ch in time_str.chars() {
+            match ch {
+                '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {
+                    num = num * 10 + (ch.to_digit(10).unwrap() as usize)
+                }
+                's' => {
+                    check_scale!(scale);
+                    scale = 1
+                }
+                'm' => {
+                    check_scale!(scale);
+                    scale = 60
+                }
+                'h' => {
+                    check_scale!(scale);
+                    scale = 60*60
+                }
+                'd' => {
+                    check_scale!(scale);
+                    scale = 24*60*60
+                }
+                _ => {
+                    return Err(anyhow!("expecting 0-9 followed by s, m, h or d"))
+                }
+            }
+        }
+        if scale == 0 {
+            scale = 24*60*60 // assume days
+        }
+        Ok(num * scale)
     }
 }

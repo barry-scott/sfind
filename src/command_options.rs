@@ -2,6 +2,7 @@ use anyhow::{anyhow, Result};
 use clap::Parser;
 use std::path::PathBuf;
 use indoc::indoc;
+use std::time::SystemTime;
 
 #[derive(Debug, Parser)]
 #[command(name = "sfind")]
@@ -70,8 +71,8 @@ pub struct CommandOptions {
     pub report_supressed_errors: bool,
     pub find_iname: bool,
     pub find_match_basename: bool,
-    pub time_from: Option<usize>,
-    pub time_till: Option<usize>,
+    pub time_from: Option<u64>,
+    pub time_till: Option<u64>,
     pub grep_ignore_case: bool,
     pub grep_lines_after: Option<usize>,
     pub grep_lines_before: Option<usize>,
@@ -140,7 +141,7 @@ impl CommandOptions {
         Ok(opt)
     }
 
-    fn parse_times(time_opt: &Option<String>) -> Result<(Option<usize>, Option<usize>)> {
+    fn parse_times(time_opt: &Option<String>) -> Result<(Option<u64>, Option<u64>)> {
         match time_opt {
             None => {
                 Ok((None, None))
@@ -162,8 +163,7 @@ impl CommandOptions {
         }
     }
 
-
-    fn parse_time(time_str: &str) -> Result<usize> {
+    fn parse_time(time_str: &str) -> Result<u64> {
         if time_str.len() == 0 {
             return Err(anyhow!("blank time string"))
         }
@@ -180,12 +180,12 @@ impl CommandOptions {
             };
         }
 
-        let mut num: usize = 0;
-        let mut scale: usize = 0;
+        let mut num: u64 = 0;
+        let mut scale: u64 = 0;
         for ch in time_str.chars() {
             match ch {
                 '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {
-                    num = num * 10 + (ch.to_digit(10).unwrap() as usize)
+                    num = num * 10 + (ch.to_digit(10).unwrap() as u64)
                 }
                 's' => {
                     check_scale!(scale);
@@ -211,6 +211,7 @@ impl CommandOptions {
         if scale == 0 {
             scale = 24*60*60 // assume days
         }
-        Ok(num * scale)
+        let now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?.as_secs();
+        Ok(now - (num * scale))
     }
 }

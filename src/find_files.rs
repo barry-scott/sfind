@@ -1,6 +1,7 @@
 use std::collections::VecDeque;
 use std::fs::{self, DirEntry};
 use std::path::{Path, PathBuf};
+use std::time::SystemTime;
 
 use regex::{Regex, RegexBuilder};
 
@@ -76,6 +77,26 @@ impl<'caller> Iterator for FindFiles<'caller> {
                     };
 
                     if self.return_file(&entry) {
+                        match self.opt.time_from {
+                            Some(time_from) => {
+                                // check file times
+                                let file_mod_secs = m.modified().ok()?.duration_since(SystemTime::UNIX_EPOCH).ok()?.as_secs();
+                                // is the file too old?
+                                if file_mod_secs < time_from {
+                                    continue;
+                                }
+                                match self.opt.time_till {
+                                    Some(time_until) => {
+                                        // is the file too new?
+                                        if file_mod_secs > time_until {
+                                            continue;
+                                        }
+                                    }
+                                    None => {}
+                                }
+                            }
+                            None => {}
+                        }
                         break Some(entry.path());
                     }
                 }

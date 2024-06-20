@@ -2,7 +2,7 @@ use anyhow::{anyhow, Result};
 use clap::Parser;
 use std::path::PathBuf;
 use indoc::indoc;
-use std::time::SystemTime;
+use std::time::{SystemTime, Duration};
 
 #[derive(Debug, Parser)]
 #[command(name = "sfind")]
@@ -71,8 +71,8 @@ pub struct CommandOptions {
     pub report_supressed_errors: bool,
     pub find_iname: bool,
     pub find_match_basename: bool,
-    pub time_from: Option<u64>,
-    pub time_till: Option<u64>,
+    pub time_from: Option<SystemTime>,
+    pub time_till: Option<SystemTime>,
     pub grep_ignore_case: bool,
     pub grep_lines_after: Option<usize>,
     pub grep_lines_before: Option<usize>,
@@ -141,7 +141,7 @@ impl CommandOptions {
         Ok(opt)
     }
 
-    fn parse_times(time_opt: &Option<String>) -> Result<(Option<u64>, Option<u64>)> {
+    fn parse_times(time_opt: &Option<String>) -> Result<(Option<SystemTime>, Option<SystemTime>)> {
         match time_opt {
             None => {
                 Ok((None, None))
@@ -163,7 +163,7 @@ impl CommandOptions {
         }
     }
 
-    fn parse_time(time_str: &str) -> Result<u64> {
+    fn parse_time(time_str: &str) -> Result<SystemTime> {
         if time_str.len() == 0 {
             return Err(anyhow!("blank time string"))
         }
@@ -211,7 +211,7 @@ impl CommandOptions {
         if scale == 0 {
             scale = 24*60*60 // assume days
         }
-        let now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?.as_secs();
-        Ok(now - (num * scale))
+        let now = SystemTime::now();
+        Ok(now - Duration::new(num * scale, 0))
     }
 }

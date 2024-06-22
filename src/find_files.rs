@@ -2,10 +2,23 @@ use std::collections::VecDeque;
 use std::fs::{self, DirEntry, Metadata};
 use std::path::{Path, PathBuf};
 
+use cfg_if;
+
 use regex::{Regex, RegexBuilder};
 
 pub use crate::command_options::CommandOptions;
 pub use crate::config_json::ConfigJson;
+
+cfg_if::cfg_if! {
+    if #[cfg(target_os = "windows")] {
+    } else {
+        // macOS and linux
+        use std::os::linux::fs::MetadataExt;
+
+        // avoid using the libc crate just for this def
+        const S_IFREG: u32 = 32768;
+    }
+}
 
 #[derive(Debug)]
 struct PathToScan {
@@ -127,6 +140,11 @@ impl<'caller> FindFiles<'caller> {
     }
 
     fn return_file(&self, entry: &DirEntry, m: &Metadata) -> bool {
+        // avoid scanning fifo, etc
+        if !Self::file_is_regular(m) {
+            return false
+        }
+
         if self.files_to_find.is_some() {
             if !self.include_file(entry) {
                 false
@@ -148,6 +166,20 @@ impl<'caller> FindFiles<'caller> {
                     eprintln!("Debug: file not included or excluded {:?}", entry.path());
                 }
                 self.file_time_allowed(m)
+            }
+        }
+    }
+
+    cfg_if::cfg_if! {
+        if #[cfg(target_os = "windows")] {
+            fn file_is_regular(m: &Metadata) {
+                return !m.is_dir()
+            }
+        } else {
+            // macOS and linux
+
+            fn file_is_regular(m: &Metadata) -> bool {
+                (m.st_mode() & S_IFREG) != 0
             }
         }
     }

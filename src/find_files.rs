@@ -1,5 +1,5 @@
 use std::collections::VecDeque;
-use std::fs::{self, DirEntry};
+use std::fs::{self, DirEntry, Metadata};
 use std::path::{Path, PathBuf};
 
 use regex::{Regex, RegexBuilder};
@@ -75,27 +75,7 @@ impl<'caller> Iterator for FindFiles<'caller> {
                         continue;
                     };
 
-                    if self.return_file(&entry) {
-                        match self.opt.time_from {
-                            Some(time_from) => {
-                                // check file times
-                                let file_mod_secs = m.modified().ok()?;
-                                // is the file too old?
-                                if file_mod_secs < time_from {
-                                    continue;
-                                }
-                                match self.opt.time_till {
-                                    Some(time_until) => {
-                                        // is the file too new?
-                                        if file_mod_secs > time_until {
-                                            continue;
-                                        }
-                                    }
-                                    None => {}
-                                }
-                            }
-                            None => {}
-                        }
+                    if self.return_file(&entry, &m) {
                         break Some(entry.path());
                     }
                 }
@@ -146,7 +126,7 @@ impl<'caller> FindFiles<'caller> {
             .unwrap_or(true)
     }
 
-    fn return_file(&self, entry: &DirEntry) -> bool {
+    fn return_file(&self, entry: &DirEntry, m: &Metadata) -> bool {
         if self.files_to_find.is_some() {
             if !self.include_file(entry) {
                 false
@@ -154,7 +134,7 @@ impl<'caller> FindFiles<'caller> {
                 if self.opt.debug {
                     eprintln!("Debug: include_file {:?}", entry.path());
                 }
-                true
+                self.file_time_allowed(m)
             }
         } else {
             // exclude files that are config to be pruned
@@ -167,7 +147,42 @@ impl<'caller> FindFiles<'caller> {
                 if self.opt.debug {
                     eprintln!("Debug: file not included or excluded {:?}", entry.path());
                 }
-                true
+                self.file_time_allowed(m)
+            }
+        }
+    }
+
+    fn file_time_allowed(&self, m: &Metadata) -> bool {
+        match self.opt.time_from {
+            None => {
+                // no check required
+                return true
+            }
+            Some(time_from) => {
+                // check file times
+                match m.modified().ok() {
+                    None => {
+                        // skip time check
+                        return true;
+                    }
+
+                    Some(file_mod_secs) => {
+                        // is the file too old?
+                        if time_from < file_mod_secs {
+                            match self.opt.time_till {
+                                Some(time_until) => {
+                                    // is the file too new?
+                                    return file_mod_secs < time_until;
+                                }
+                                None => {
+                                    return true
+                                }
+                            }
+                        } else {
+                            return false
+                        }
+                    }
+                }
             }
         }
     }

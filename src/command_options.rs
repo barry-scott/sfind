@@ -37,6 +37,20 @@ struct Cli {
         })]
     pub times: Option<String>,
 
+    #[arg(long = "min-size", help = indoc! {"
+        match the file whoes size is at least <size>
+        where <size> is in <num><unit> where unit is optional for bytes
+        and k for KiB, m for MiB, g for GiB, t for TiB"
+        })]
+    pub min_size: Option<String>,
+
+    #[arg(long = "max-size", help = indoc! {"
+        match the file whoes size is leess then <size>
+        where <size> is in <num><unit> where unit is optional for bytes
+        and k for KiB, m for MiB, g for GiB, t for TiB"
+        })]
+    pub max_size: Option<String>,
+
     #[arg(short, long, value_name = "LINES", help = "lines to show after match")]
     pub after: Option<usize>,
 
@@ -73,6 +87,8 @@ pub struct CommandOptions {
     pub find_match_basename: bool,
     pub time_from: Option<SystemTime>,
     pub time_till: Option<SystemTime>,
+    pub size_min: Option<u64>,
+    pub size_max: Option<u64>,
     pub grep_ignore_case: bool,
     pub grep_lines_after: Option<usize>,
     pub grep_lines_before: Option<usize>,
@@ -98,6 +114,8 @@ impl CommandOptions {
 
         // parse times
         let (time_from, time_till) = Self::parse_times(&cli.times)?;
+        let min_size = Self::parse_size(&cli.min_size)?;
+        let max_size = Self::parse_size(&cli.max_size)?;
 
         let mut opt = CommandOptions {
             progname,
@@ -109,6 +127,8 @@ impl CommandOptions {
             find_match_basename: !cli.match_path,
             time_from: time_from,
             time_till: time_till,
+            size_min: min_size,
+            size_max: max_size,
             grep_ignore_case: !cli.case_sensitive_contents,
             grep_lines_after: cli.after,
             grep_lines_before: cli.before,
@@ -204,7 +224,7 @@ impl CommandOptions {
                     scale = 24*60*60
                 }
                 _ => {
-                    return Err(anyhow!("expecting 0-9 followed by s, m, h or d"))
+                    return time_error!()
                 }
             }
         }
@@ -213,5 +233,63 @@ impl CommandOptions {
         }
         let now = SystemTime::now();
         Ok(now - Duration::new(num * scale, 0))
+    }
+
+    fn parse_size(size_opt: &Option<String>) -> Result<Option<u64>> {
+        match size_opt {
+            None => {
+                Ok(None)
+            }
+            Some(size_str) => {
+                if size_str.len() == 0 {
+                    return Err(anyhow!("blank size string"))
+                }
+                macro_rules! size_error {
+                    () => {
+                        Err(anyhow!("expecting 0-9 followed by k, m, g, t"))
+                    };
+                }
+                macro_rules! check_scale {
+                    ($scale:expr) => {
+                        if $scale != 0 {
+                            return size_error!()
+                        }
+                    };
+                }
+
+                let mut num: u64 = 0;
+                let mut scale: u64 = 0;
+                for ch in size_str.chars() {
+                    match ch {
+                        '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {
+                            num = num * 10 + (ch.to_digit(10).unwrap() as u64)
+                        }
+                        'k' => {
+                            check_scale!(scale);
+                            scale = 1024
+                        }
+                        'm' => {
+                            check_scale!(scale);
+                            scale = 1024*1024
+                        }
+                        'g' => {
+                            check_scale!(scale);
+                            scale = 1024*1024*1024
+                        }
+                        't' => {
+                            check_scale!(scale);
+                            scale = 1024*1024*1024*1024
+                        }
+                        _ => {
+                            return size_error!()
+                        }
+                    }
+                }
+                if scale == 0 {
+                    scale = 1 // assume no unit
+                }
+                Ok(Some(num * scale))
+            }
+        }
     }
 }

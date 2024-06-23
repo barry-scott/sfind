@@ -152,7 +152,7 @@ impl<'caller> FindFiles<'caller> {
                 if self.opt.debug {
                     eprintln!("Debug: include_file {:?}", entry.path());
                 }
-                self.file_time_allowed(m)
+                self.file_time_allowed(m) && self.file_size_allowed(m)
             }
         } else {
             // exclude files that are config to be pruned
@@ -165,7 +165,7 @@ impl<'caller> FindFiles<'caller> {
                 if self.opt.debug {
                     eprintln!("Debug: file not included or excluded {:?}", entry.path());
                 }
-                self.file_time_allowed(m)
+                self.file_time_allowed(m) && self.file_size_allowed(m)
             }
         }
     }
@@ -182,6 +182,28 @@ impl<'caller> FindFiles<'caller> {
                 (m.st_mode() & S_IFREG) != 0
             }
         }
+    }
+
+    fn file_size_allowed(&self, m: &Metadata) -> bool {
+        match self.opt.size_min {
+            None => {}
+            Some(size_min) => {
+                    // is the file too small?
+                if m.len() < size_min {
+                    return false
+                }
+            }
+        }
+        match self.opt.size_max {
+            None => {}
+            Some(size_max) => {
+                    // is the file too big?
+                if m.len() > size_max {
+                    return false
+                }
+            }
+        }
+        true
     }
 
     fn file_time_allowed(&self, m: &Metadata) -> bool {

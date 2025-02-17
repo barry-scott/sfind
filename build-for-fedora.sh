@@ -70,7 +70,7 @@ cd tmp/SOURCES
 colour-print "<>info Info:<> make specfile"
 # rust2rpm fails on one host becuase of some unknown issue with TMPDIR
 # using an empty directory works around the failure
-TMPDIR=$PWD/tmp/tmpdir rust2rpm ./sfind-${RPM_VERSION}.crate
+TMPDIR=$PWD/tmp/tmpdir rust2rpm --path ./sfind-${RPM_VERSION}.crate
 mv *.spec ../SPECS
 cd ../..
 

@@ -4,6 +4,15 @@ RPM_VERSION="$(grep '^version = ' Cargo.toml)"
 RPM_VERSION="${RPM_VERSION#version = \"}"
 RPM_VERSION="${RPM_VERSION%\"}"
 
+# look for the colour-print command installed
+# from the PyPI https://pypi.org/project/colour-text/
+if ! which colour-print >/dev/null
+then
+    function colour-print {
+        echo "$@"
+    }
+fi
+
 function usage {
     colour-print "<>error Usage: <> $0 copr-release|copr-testing|mock [x86_64|aarch64] [<fedora-release>]"
 }

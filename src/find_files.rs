@@ -11,8 +11,14 @@ pub use crate::config_json::ConfigJson;
 
 cfg_if::cfg_if! {
     if #[cfg(target_os = "windows")] {
+    } else if #[cfg(target_os = "macos")] {
+        // macOS
+        use std::os::macos::fs::MetadataExt;
+
+        // avoid using the libc crate just for this def
+        const S_IFREG: u32 = 32768;
     } else {
-        // macOS and linux
+        // linux
         use std::os::linux::fs::MetadataExt;
 
         // avoid using the libc crate just for this def

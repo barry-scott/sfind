@@ -112,9 +112,9 @@ cfg_if::cfg_if! {
             let mut path_buf = [0u16; MAX_PATH as usize];
             let hresult = unsafe {
                 SHGetFolderPathW(
-                    0,
+                    std::ptr::null_mut(),
                     CSIDL_APPDATA as i32,
-                    0,
+                    std::ptr::null_mut(),
                     SHGFP_TYPE_CURRENT as u32,
                     path_buf.as_mut_ptr())
             };

@@ -178,7 +178,7 @@ impl<'caller> FindFiles<'caller> {
 
     cfg_if::cfg_if! {
         if #[cfg(target_os = "windows")] {
-            fn file_is_regular(m: &Metadata) {
+            fn file_is_regular(m: &Metadata) -> bool {
                 return !m.is_dir()
             }
         } else {
